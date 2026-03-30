@@ -83,4 +83,22 @@ router.get("/:id/download", (req, res) => {
   });
 });
 
+// VIEW FILE - GET /api/projects/:id/file (pour affichage direct)
+router.get("/:id/file", (req, res) => {
+  db.get("SELECT file_data, file_name, file_type FROM projects WHERE id = ?", [req.params.id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!row || !row.file_data) {
+      return res.status(404).json({ error: "Fichier non trouvé" });
+    }
+
+    // Servir le fichier sans attachment (pour affichage dans le navigateur)
+    res.setHeader("Content-Type", row.file_type);
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(row.file_data);
+  });
+});
+
 module.exports = router;

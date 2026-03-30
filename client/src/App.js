@@ -88,6 +88,76 @@ function ProjectsPage() {
     window.location.href = `http://localhost:3000/api/projects/${id}/download`;
   };
 
+  const getFileType = (fileName) => {
+    if (!fileName) return null;
+    const ext = fileName.split('.').pop().toLowerCase();
+    
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
+    const audioExts = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+    const pdfExts = ['pdf'];
+    
+    if (imageExts.includes(ext)) return 'image';
+    if (videoExts.includes(ext)) return 'video';
+    if (audioExts.includes(ext)) return 'audio';
+    if (pdfExts.includes(ext)) return 'pdf';
+    return 'file';
+  };
+
+  const renderFilePreview = (project) => {
+    if (!project.file_name) return null;
+    
+    const fileType = getFileType(project.file_name);
+    const fileUrl = `http://localhost:3000/api/projects/${project.id}/file`;
+
+    return (
+      <div className="mt-4 p-4 bg-blue-50 rounded border-2 border-blue-200">
+        {fileType === 'image' && (
+          <div>
+            <p className="font-bold mb-2">📷 Image attachée:</p>
+            <img src={fileUrl} alt={project.file_name} className="max-w-md rounded shadow" />
+          </div>
+        )}
+        {fileType === 'video' && (
+          <div>
+            <p className="font-bold mb-2">🎬 Vidéo attachée:</p>
+            <video width="400" controls className="rounded shadow">
+              <source src={fileUrl} type={project.file_type} />
+              Votre navigateur ne supporte pas la vidéo.
+            </video>
+          </div>
+        )}
+        {fileType === 'audio' && (
+          <div>
+            <p className="font-bold mb-2">🎵 Audio attaché:</p>
+            <audio controls className="w-full rounded shadow">
+              <source src={fileUrl} type={project.file_type} />
+              Votre navigateur ne supporte pas l'audio.
+            </audio>
+          </div>
+        )}
+        {fileType === 'pdf' && (
+          <div>
+            <p className="font-bold mb-2">📄 PDF attaché:</p>
+            <iframe src={fileUrl} width="100%" height="400" className="rounded shadow"></iframe>
+          </div>
+        )}
+        {fileType === 'file' && (
+          <div>
+            <p className="font-bold mb-2">📎 Fichier attaché:</p>
+            <p className="text-gray-600 mb-2">{project.file_name} ({project.file_type})</p>
+            <button 
+              onClick={() => downloadFile(project.id, project.file_name)}
+              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+            >
+              ⬇️ Télécharger
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-8">
       <h1 className="text-4xl font-bold mb-8">Gestion des Projets</h1>
@@ -118,17 +188,7 @@ function ProjectsPage() {
               <h3 className="text-xl font-semibold">{project.title_fr}</h3>
               <p className="text-gray-600"><strong>Code:</strong> {project.code_anr}</p>
               <p className="text-gray-600"><strong>Résumé:</strong> {project.summary_fr}</p>
-              {project.file_name && (
-                <div className="mt-2">
-                  <p className="text-gray-600"><strong>📎 Fichier:</strong> {project.file_name}</p>
-                  <button 
-                    onClick={() => downloadFile(project.id, project.file_name)}
-                    className="mt-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                  >
-                    Télécharger
-                  </button>
-                </div>
-              )}
+              {renderFilePreview(project)}
             </li>
           ))}
         </ul>
