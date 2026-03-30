@@ -27,9 +27,23 @@ db.serialize(() => {
       results_en TEXT,
       perspectives_fr TEXT,
       perspectives_en TEXT,
+      file_data BLOB,
+      file_name TEXT,
+      file_type TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Ajouter les colonnes si elles n'existent pas (pour les BD existantes)
+  db.run(`ALTER TABLE projects ADD COLUMN file_data BLOB`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_data ajoutée");
+  });
+  db.run(`ALTER TABLE projects ADD COLUMN file_name TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_name ajoutée");
+  });
+  db.run(`ALTER TABLE projects ADD COLUMN file_type TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_type ajoutée");
+  });
 });
 
 module.exports = db;

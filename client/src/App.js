@@ -25,6 +25,7 @@ function App() {
 function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [file, setFile] = useState(null);
   const [formData, setFormData] = useState({
     code_anr: "",
     title_fr: "",
@@ -52,19 +53,39 @@ function ProjectsPage() {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0] || null);
+  };
+
   const handleAddProject = (e) => {
     e.preventDefault();
+    
+    const data = new FormData();
+    data.append("code_anr", formData.code_anr);
+    data.append("title_fr", formData.title_fr);
+    data.append("title_en", formData.title_en);
+    data.append("summary_fr", formData.summary_fr);
+    data.append("summary_en", formData.summary_en);
+    
+    if (file) {
+      data.append("file", file);
+    }
+
     fetch("http://localhost:3000/api/projects", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
+      body: data
     })
       .then((res) => res.json())
       .then(() => {
         setFormData({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+        setFile(null);
         loadProjects();
       })
       .catch(err => console.error("Erreur ajout:", err));
+  };
+
+  const downloadFile = (id, fileName) => {
+    window.location.href = `http://localhost:3000/api/projects/${id}/download`;
   };
 
   return (
@@ -79,7 +100,13 @@ function ProjectsPage() {
         <input type="text" name="title_en" placeholder="Titre EN" value={formData.title_en} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required />
         <textarea name="summary_fr" placeholder="Résumé FR" value={formData.summary_fr} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
         <textarea name="summary_en" placeholder="Résumé EN" value={formData.summary_en} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Ajouter</button>
+        
+        {/* Upload de fichier */}
+        <label className="block mb-2 font-bold">📎 Joindre un fichier (optionnel)</label>
+        <input type="file" onChange={handleFileChange} className="block w-full mb-2 p-2 border" />
+        {file && <p className="text-blue-600 mb-2">✅ Fichier sélectionné: {file.name}</p>}
+        
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Ajouter</button>
       </form>
 
       {/* Liste des projets */}
@@ -87,10 +114,21 @@ function ProjectsPage() {
       {loading ? <p>Chargement...</p> : projects && projects.length > 0 ? (
         <ul className="space-y-4">
           {projects.map((project) => (
-            <li key={project.id} className="border p-4 rounded bg-white">
+            <li key={project.id} className="border p-4 rounded bg-white shadow">
               <h3 className="text-xl font-semibold">{project.title_fr}</h3>
               <p className="text-gray-600"><strong>Code:</strong> {project.code_anr}</p>
               <p className="text-gray-600"><strong>Résumé:</strong> {project.summary_fr}</p>
+              {project.file_name && (
+                <div className="mt-2">
+                  <p className="text-gray-600"><strong>📎 Fichier:</strong> {project.file_name}</p>
+                  <button 
+                    onClick={() => downloadFile(project.id, project.file_name)}
+                    className="mt-2 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  >
+                    Télécharger
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
