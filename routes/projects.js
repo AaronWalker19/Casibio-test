@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db/database");
+const { authenticateToken, requireAdmin } = require("../middleware/auth");
 
 // Log pour déboguer les requêtes
 router.use((req, res, next) => {
@@ -8,8 +9,8 @@ router.use((req, res, next) => {
   next();
 });
 
-// CREATE - POST /api/projects
-router.post("/", (req, res) => {
+// CREATE - POST /api/projects (members and admins)
+router.post("/", authenticateToken, (req, res) => {
   const {
     code_anr,
     title_fr,

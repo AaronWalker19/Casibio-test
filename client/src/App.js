@@ -1,31 +1,16 @@
 import { useEffect, useState } from "react";
 
-
 function App() {
-  const [data, setData] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:3000/api/test")
-      .then(res => res.json())
-      .then(data => setData(data.message));
-  }, []);
-
-  return (
-    <div>
-      <h1 className="text-4xl font-bold text-blue-200">CASiBIO</h1>
-      <p>{data}</p>
-      <div className="bg-red-500 text-white text-4xl">
-      TEST TAILWIND
-    </div>
-    </div>
-    
-  );
-}
-
-function ProjectsPage() {
+  const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
+  const [currentView, setCurrentView] = useState("projects"); // "projects" | "users"
+  
+  // Form states
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [registerForm, setRegisterForm] = useState({ username: "", email: "", password: "" });
+  const [projectForm, setProjectForm] = useState({
     code_anr: "",
     title_fr: "",
     title_en: "",
@@ -33,70 +18,456 @@ function ProjectsPage() {
     summary_en: ""
   });
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   useEffect(() => {
-    loadProjects();
+    // Récupérer user du localStorage
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      const savedUser = JSON.parse(localStorage.getItem("user"));
+      setUser(savedUser);
+      loadProjects(savedToken);
+      if (savedUser.role === "admin") {
+        loadUsers(savedToken);
+      }
+    }
+    // Toujours charger les projets pour les visiteurs
+    loadProjects(null);
+    setLoading(false);
   }, []);
 
-  const loadProjects = () => {
-    fetch("http://localhost:3000/api/projects")
-      .then((res) => res.json())
-      .then((data) => {
-        setProjects(data || []);
-        setLoading(false);
-      })
-      .catch(err => console.error("Erreur chargement:", err));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleAddProject = (e) => {
-    e.preventDefault();
+  const loadProjects = (token) => {
     fetch("http://localhost:3000/api/projects", {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    })
+      .then(res => res.json())
+      .then(data => setProjects(data || []))
+      .catch(err => console.error("Erreur chargement projets:", err));
+  };
+
+  const loadUsers = (token) => {
+    fetch("http://localhost:3000/api/auth/users", {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setUsers(data || []))
+      .catch(err => console.error("Erreur chargement users:", err));
+  };
+
+  // AUTHENTIFICATION
+  const handleLogin = (e) => {
+    e.preventDefault();
+    fetch("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(loginForm)
     })
-      .then((res) => res.json())
-      .then(() => {
-        setFormData({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
-        loadProjects();
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          setUser(data.user);
+          setLoginForm({ username: "", password: "" });
+          loadProjects(data.token);
+          if (data.user.role === "admin") {
+            loadUsers(data.token);
+          }
+          setShowLoginModal(false);
+        }
       })
-      .catch(err => console.error("Erreur ajout:", err));
+      .catch(err => console.error("Erreur login:", err));
   };
 
-  return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold mb-8">Gestion des Projets</h1>
-      
-      {/* Formulaire d'ajout */}
-      <form onSubmit={handleAddProject} className="bg-gray-100 p-6 rounded mb-8">
-        <h2 className="text-2xl font-bold mb-4">Ajouter un projet</h2>
-        <input type="text" name="code_anr" placeholder="Code ANR" value={formData.code_anr} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required />
-        <input type="text" name="title_fr" placeholder="Titre FR" value={formData.title_fr} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required />
-        <input type="text" name="title_en" placeholder="Titre EN" value={formData.title_en} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required />
-        <textarea name="summary_fr" placeholder="Résumé FR" value={formData.summary_fr} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
-        <textarea name="summary_en" placeholder="Résumé EN" value={formData.summary_en} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Ajouter</button>
-      </form>
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    
+    fetch("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(registerForm)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          if (!user) {
+            // Première inscription
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            setUser(data.user);
+            loadProjects(data.token);
+            setShowLoginModal(false);
+          } else {
+            // Admin ajoute un user
+            alert("Utilisateur créé: " + data.user.username);
+            loadUsers(localStorage.getItem("token"));
+          }
+          setRegisterForm({ username: "", email: "", password: "" });
+          setShowLoginModal(false);
+        }
+      })
+      .catch(err => console.error("Erreur register:", err));
+  };
 
-      {/* Liste des projets */}
-      <h2 className="text-2xl font-bold mb-4">Liste des projets</h2>
-      {loading ? <p>Chargement...</p> : projects && projects.length > 0 ? (
-        <ul className="space-y-4">
-          {projects.map((project) => (
-            <li key={project.id} className="border p-4 rounded bg-white">
-              <h3 className="text-xl font-semibold">{project.title_fr}</h3>
-              <p className="text-gray-600"><strong>Code:</strong> {project.code_anr}</p>
-              <p className="text-gray-600"><strong>Résumé:</strong> {project.summary_fr}</p>
-            </li>
-          ))}
-        </ul>
-      ) : <p className="text-red-500">Aucun projet trouvé</p>}
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    setUsers([]);
+    setProjects([]);
+    setCurrentView("projects");
+  };
+
+  // PROJETS
+  const handleAddProject = (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+
+    fetch("http://localhost:3000/api/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(projectForm)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          setProjectForm({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+          loadProjects(token);
+        }
+      })
+      .catch(err => console.error("Erreur ajout projet:", err));
+  };
+
+  // GESTION UTILISATEURS
+  const handleChangeRole = (userId, newRole) => {
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/auth/users/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ role: newRole })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          loadUsers(token);
+        }
+      })
+      .catch(err => console.error("Erreur:", err));
+  };
+
+  const handleDeleteUser = (userId) => {
+    if (!window.confirm("Confirmer la suppression?")) return;
+    
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/auth/users/${userId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          loadUsers(token);
+        }
+      })
+      .catch(err => console.error("Erreur:", err));
+  };
+
+  // UI - PRINCIPALE
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-indigo-600 text-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">CASiBIO</h1>
+            <div className="flex items-center gap-4">
+              {user ? (
+                <>
+                  <span className="text-sm">
+                    👤 {user.username} 
+                    {user.role === "admin" && <span className="ml-2 bg-red-500 px-2 py-1 rounded text-xs font-semibold">ADMIN</span>}
+                    {user.role === "member" && <span className="ml-2 bg-blue-500 px-2 py-1 rounded text-xs font-semibold">MEMBER</span>}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="bg-white text-indigo-600 px-4 py-2 rounded font-semibold hover:bg-gray-100 transition"
+                >
+                  Se connecter
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation - visible seulement si connecté */}
+        {user && (
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={() => setCurrentView("projects")}
+              className={`px-4 py-2 rounded font-semibold transition ${
+                currentView === "projects"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              📋 Projets
+            </button>
+            {user.role === "admin" && (
+              <button
+                onClick={() => setCurrentView("users")}
+                className={`px-4 py-2 rounded font-semibold transition ${
+                  currentView === "users"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                👥 Utilisateurs
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* PROJETS */}
+        {!user || currentView === "projects" && (
+          <div>
+            {/* Formulaire d'ajout (membres et admins) */}
+            {user && (user.role === "member" || user.role === "admin") && (
+              <form onSubmit={handleAddProject} className="bg-white p-6 rounded-lg shadow mb-8">
+                <h2 className="text-2xl font-bold mb-4">➕ Ajouter un projet</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Code ANR"
+                    value={projectForm.code_anr}
+                    onChange={(e) => setProjectForm({ ...projectForm, code_anr: e.target.value })}
+                    className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Titre FR"
+                    value={projectForm.title_fr}
+                    onChange={(e) => setProjectForm({ ...projectForm, title_fr: e.target.value })}
+                    className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Titre EN"
+                    value={projectForm.title_en}
+                    onChange={(e) => setProjectForm({ ...projectForm, title_en: e.target.value })}
+                    className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                    required
+                  />
+                </div>
+                <textarea
+                  placeholder="Résumé FR"
+                  value={projectForm.summary_fr}
+                  onChange={(e) => setProjectForm({ ...projectForm, summary_fr: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded mt-4 focus:outline-none focus:border-indigo-600"
+                  required
+                ></textarea>
+                <textarea
+                  placeholder="Résumé EN"
+                  value={projectForm.summary_en}
+                  onChange={(e) => setProjectForm({ ...projectForm, summary_en: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded mt-2 focus:outline-none focus:border-indigo-600"
+                  required
+                ></textarea>
+                <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded mt-4 font-semibold hover:bg-indigo-700">
+                  Ajouter
+                </button>
+              </form>
+            )}
+
+            {/* Liste des projets */}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">📚 Projets</h2>
+              {projects.length === 0 ? (
+                <p className="text-gray-500">Aucun projet</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {projects.map(project => (
+                    <div key={project.id} className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                      <h3 className="text-xl font-semibold text-indigo-600 mb-2">{project.title_fr}</h3>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <strong>Code:</strong> {project.code_anr}
+                      </p>
+                      <p className="text-gray-700 mb-4">{project.summary_fr}</p>
+                      {user && (user.role === "member" || user.role === "admin") && (
+                        <div className="flex gap-2">
+                          <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                            ✏️ Modifier
+                          </button>
+                          <button className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* UTILISATEURS (admin only) */}
+        {currentView === "users" && user.role === "admin" && (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">👥 Gestion des utilisateurs</h2>
+            
+            {/* Ajouter utilisateur */}
+            <form onSubmit={handleRegister} className="bg-white p-6 rounded-lg shadow mb-8">
+              <h3 className="text-xl font-bold mb-4">➕ Ajouter un utilisateur</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input
+                  type="text"
+                  placeholder="Nom d'utilisateur"
+                  value={registerForm.username}
+                  onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
+                  className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                  className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Mot de passe"
+                  value={registerForm.password}
+                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                  className="p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                  required
+                />
+              </div>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded mt-4 font-semibold hover:bg-indigo-700">
+                Ajouter
+              </button>
+            </form>
+
+            {/* Liste des utilisateurs */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold">Utilisateur</th>
+                    <th className="px-6 py-3 text-left font-semibold">Email</th>
+                    <th className="px-6 py-3 text-left font-semibold">Rôle</th>
+                    <th className="px-6 py-3 text-left font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} className="border-b hover:bg-gray-50">
+                      <td className="px-6 py-3 font-semibold">{u.username}</td>
+                      <td className="px-6 py-3">{u.email}</td>
+                      <td className="px-6 py-3">
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                          className="p-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Modal de connexion */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-indigo-600">Se connecter</h2>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Nom d'utilisateur"
+                value={loginForm.username}
+                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Mot de passe"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-600"
+                required
+              />
+              <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded font-semibold hover:bg-indigo-700">
+                Se connecter
+              </button>
+            </form>
+
+            <p className="text-center text-xs text-gray-500 mt-6">
+              Pour créer un compte, veuillez contacter un administrateur.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default ProjectsPage;
+export default App;
