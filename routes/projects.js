@@ -14,8 +14,8 @@ router.use((req, res, next) => {
   next();
 });
 
-// CREATE - POST /api/projects (avec fichier optionnel)
-router.post("/", upload.single("file"), (req, res) => {
+// CREATE - POST /api/projects (avec fichiers optionnels)
+router.post("/", upload.array("files"), (req, res) => {
   const {
     code_anr,
     title_fr,
@@ -24,29 +24,41 @@ router.post("/", upload.single("file"), (req, res) => {
     summary_en
   } = req.body;
 
-  const file = req.file;
-  const fileData = file ? file.buffer : null;
-  const fileName = file ? file.originalname : null;
-  const fileType = file ? file.mimetype : null;
-
   const sql = `
     INSERT INTO projects
-    (code_anr, title_fr, title_en, summary_fr, summary_en, file_data, file_name, file_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (code_anr, title_fr, title_en, summary_fr, summary_en)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
-  db.run(sql, [code_anr, title_fr, title_en, summary_fr, summary_en, fileData, fileName, fileType], function(err) {
+  db.run(sql, [code_anr, title_fr, title_en, summary_fr, summary_en], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
 
-    res.json({ id: this.lastID, message: "Projet créé avec succès" });
+    const projectId = this.lastID;
+
+    // Si des fichiers sont attachés, les insérer
+    if (req.files && req.files.length > 0) {
+      const fileSql = `
+        INSERT INTO project_files
+        (project_id, file_data, file_name, file_display_name, file_type)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      req.files.forEach((file) => {
+        db.run(fileSql, [projectId, file.buffer, file.originalname, file.originalname, file.mimetype], (err) => {
+          if (err) console.error("Erreur insertion fichier:", err);
+        });
+      });
+    }
+
+    res.json({ id: projectId, message: "Projet créé avec succès" });
   });
 });
 
 // GET ALL - GET /api/projects
 router.get("/", (req, res) => {
-  db.all("SELECT id, code_anr, title_fr, title_en, summary_fr, summary_en, file_name, file_type, created_at FROM projects", [], (err, rows) => {
+  db.all("SELECT * FROM projects ORDER BY created_at DESC", [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -55,9 +67,9 @@ router.get("/", (req, res) => {
   });
 });
 
-// GET ONE - GET /api/projects/:id
-router.get("/:id", (req, res) => {
-  db.get("SELECT * FROM projects WHERE id = ?", [req.params.id], (err, row) => {
+// GET ONE - GET /api/projects/:projectId
+router.get("/:projectId", (req, res) => {
+  db.get("SELECT * FROM projects WHERE id = ?", [req.params.projectId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -66,9 +78,20 @@ router.get("/:id", (req, res) => {
   });
 });
 
-// DOWNLOAD FILE - GET /api/projects/:id/download
-router.get("/:id/download", (req, res) => {
-  db.get("SELECT file_data, file_name, file_type FROM projects WHERE id = ?", [req.params.id], (err, row) => {
+// GET FILES OF PROJECT - GET /api/projects/:projectId/files
+router.get("/:projectId/files", (req, res) => {
+  db.all("SELECT id, file_name, file_display_name, file_type FROM project_files WHERE project_id = ? ORDER BY created_at", [req.params.projectId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json(rows);
+  });
+});
+
+// DOWNLOAD FILE - GET /api/projects/:projectId/file/:fileId/download
+router.get("/:projectId/file/:fileId/download", (req, res) => {
+  db.get("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -83,9 +106,9 @@ router.get("/:id/download", (req, res) => {
   });
 });
 
-// VIEW FILE - GET /api/projects/:id/file (pour affichage direct)
-router.get("/:id/file", (req, res) => {
-  db.get("SELECT file_data, file_name, file_type FROM projects WHERE id = ?", [req.params.id], (err, row) => {
+// VIEW FILE - GET /api/projects/:projectId/file/:fileId/view
+router.get("/:projectId/file/:fileId/view", (req, res) => {
+  db.get("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -94,10 +117,37 @@ router.get("/:id/file", (req, res) => {
       return res.status(404).json({ error: "Fichier non trouvé" });
     }
 
-    // Servir le fichier sans attachment (pour affichage dans le navigateur)
     res.setHeader("Content-Type", row.file_type);
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.send(row.file_data);
+  });
+});
+
+// RENAME FILE - PUT /api/projects/:projectId/file/:fileId/rename
+router.put("/:projectId/file/:fileId/rename", (req, res) => {
+  const { new_name } = req.body;
+
+  if (!new_name) {
+    return res.status(400).json({ error: "Le nouveau nom est requis" });
+  }
+
+  db.run("UPDATE project_files SET file_display_name = ? WHERE id = ? AND project_id = ?", [new_name, req.params.fileId, req.params.projectId], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json({ message: "Fichier renommé avec succès" });
+  });
+});
+
+// DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
+router.delete("/:projectId/file/:fileId", (req, res) => {
+  db.run("DELETE FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json({ message: "Fichier supprimé avec succès" });
   });
 });
 

@@ -27,10 +27,21 @@ db.serialize(() => {
       results_en TEXT,
       perspectives_fr TEXT,
       perspectives_en TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Table séparée pour les fichiers (supports plusieurs fichiers par projet)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
       file_data BLOB,
       file_name TEXT,
+      file_display_name TEXT,
       file_type TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
     )
   `);
 

@@ -1,31 +1,9 @@
 import { useEffect, useState } from "react";
 
-
-function App() {
-  const [data, setData] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:3000/api/test")
-      .then(res => res.json())
-      .then(data => setData(data.message));
-  }, []);
-
-  return (
-    <div>
-      <h1 className="text-4xl font-bold text-blue-200">CASiBIO</h1>
-      <p>{data}</p>
-      <div className="bg-red-500 text-white text-4xl">
-      TEST TAILWIND
-    </div>
-    </div>
-    
-  );
-}
-
 function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [formData, setFormData] = useState({
     code_anr: "",
     title_fr: "",
@@ -33,6 +11,9 @@ function ProjectsPage() {
     summary_fr: "",
     summary_en: ""
   });
+  const [projectFiles, setProjectFiles] = useState({});
+  const [editingFile, setEditingFile] = useState(null);
+  const [newFileName, setNewFileName] = useState("");
 
   useEffect(() => {
     loadProjects();
@@ -43,6 +24,14 @@ function ProjectsPage() {
       .then((res) => res.json())
       .then((data) => {
         setProjects(data || []);
+        // Charger les fichiers de chaque projet
+        data.forEach(project => {
+          fetch(`http://localhost:3000/api/projects/${project.id}/files`)
+            .then(res => res.json())
+            .then(files => {
+              setProjectFiles(prev => ({ ...prev, [project.id]: files }));
+            });
+        });
         setLoading(false);
       })
       .catch(err => console.error("Erreur chargement:", err));
@@ -54,7 +43,7 @@ function ProjectsPage() {
   };
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0] || null);
+    setFiles(Array.from(e.target.files || []));
   };
 
   const handleAddProject = (e) => {
@@ -67,9 +56,10 @@ function ProjectsPage() {
     data.append("summary_fr", formData.summary_fr);
     data.append("summary_en", formData.summary_en);
     
-    if (file) {
-      data.append("file", file);
-    }
+    // Ajouter tous les fichiers
+    files.forEach((file) => {
+      data.append("files", file);
+    });
 
     fetch("http://localhost:3000/api/projects", {
       method: "POST",
@@ -78,14 +68,48 @@ function ProjectsPage() {
       .then((res) => res.json())
       .then(() => {
         setFormData({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
-        setFile(null);
+        setFiles([]);
         loadProjects();
       })
       .catch(err => console.error("Erreur ajout:", err));
   };
 
-  const downloadFile = (id, fileName) => {
-    window.location.href = `http://localhost:3000/api/projects/${id}/download`;
+  const downloadFile = (projectId, fileId, fileName) => {
+    window.location.href = `http://localhost:3000/api/projects/${projectId}/file/${fileId}/download`;
+  };
+
+  const deleteFile = (projectId, fileId) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce fichier ?")) {
+      fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}`, {
+        method: "DELETE"
+      })
+        .then(res => res.json())
+        .then(() => {
+          alert("Fichier supprimé");
+          loadProjects();
+        })
+        .catch(err => console.error("Erreur suppression:", err));
+    }
+  };
+
+  const renameFile = (projectId, fileId, oldName) => {
+    setEditingFile({ projectId, fileId });
+    setNewFileName(oldName);
+  };
+
+  const saveRename = (projectId, fileId) => {
+    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/rename`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ new_name: newFileName })
+    })
+      .then(res => res.json())
+      .then(() => {
+        alert("Fichier renommé");
+        setEditingFile(null);
+        loadProjects();
+      })
+      .catch(err => console.error("Erreur renommage:", err));
   };
 
   const getFileType = (fileName) => {
@@ -104,56 +128,93 @@ function ProjectsPage() {
     return 'file';
   };
 
-  const renderFilePreview = (project) => {
-    if (!project.file_name) return null;
-    
-    const fileType = getFileType(project.file_name);
-    const fileUrl = `http://localhost:3000/api/projects/${project.id}/file`;
+  const renderFilePreview = (project, projFiles) => {
+    if (!projFiles || projFiles.length === 0) return null;
 
     return (
       <div className="mt-4 p-4 bg-blue-50 rounded border-2 border-blue-200">
-        {fileType === 'image' && (
-          <div>
-            <p className="font-bold mb-2">📷 Image attachée:</p>
-            <img src={fileUrl} alt={project.file_name} className="max-w-md rounded shadow" />
-          </div>
-        )}
-        {fileType === 'video' && (
-          <div>
-            <p className="font-bold mb-2">🎬 Vidéo attachée:</p>
-            <video width="400" controls className="rounded shadow">
-              <source src={fileUrl} type={project.file_type} />
-              Votre navigateur ne supporte pas la vidéo.
-            </video>
-          </div>
-        )}
-        {fileType === 'audio' && (
-          <div>
-            <p className="font-bold mb-2">🎵 Audio attaché:</p>
-            <audio controls className="w-full rounded shadow">
-              <source src={fileUrl} type={project.file_type} />
-              Votre navigateur ne supporte pas l'audio.
-            </audio>
-          </div>
-        )}
-        {fileType === 'pdf' && (
-          <div>
-            <p className="font-bold mb-2">📄 PDF attaché:</p>
-            <iframe src={fileUrl} width="100%" height="400" className="rounded shadow"></iframe>
-          </div>
-        )}
-        {fileType === 'file' && (
-          <div>
-            <p className="font-bold mb-2">📎 Fichier attaché:</p>
-            <p className="text-gray-600 mb-2">{project.file_name} ({project.file_type})</p>
-            <button 
-              onClick={() => downloadFile(project.id, project.file_name)}
-              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-            >
-              ⬇️ Télécharger
-            </button>
-          </div>
-        )}
+        <h4 className="font-bold mb-3">📁 Fichiers attachés ({projFiles.length}):</h4>
+        <div className="space-y-3">
+          {projFiles.map((file) => {
+            const fileType = getFileType(file.file_name);
+            const fileUrl = `http://localhost:3000/api/projects/${project.id}/file/${file.id}/view`;
+
+            return (
+              <div key={file.id} className="border rounded p-2 bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  {editingFile && editingFile.fileId === file.id ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newFileName}
+                        onChange={(e) => setNewFileName(e.target.value)}
+                        className="border rounded px-2 py-1 flex-1"
+                      />
+                      <button
+                        onClick={() => saveRename(project.id, file.id)}
+                        className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingFile(null)}
+                        className="bg-gray-500 text-white px-2 py-1 rounded text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-sm">{file.file_display_name || file.file_name}</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => renameFile(project.id, file.id, file.file_display_name || file.file_name)}
+                          className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => deleteFile(project.id, file.id)}
+                          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {fileType === 'image' && (
+                  <img src={fileUrl} alt={file.file_name} className="max-w-xs rounded shadow" />
+                )}
+                {fileType === 'video' && (
+                  <video width="300" controls className="rounded shadow">
+                    <source src={fileUrl} type={file.file_type} />
+                  </video>
+                )}
+                {fileType === 'audio' && (
+                  <audio controls className="w-full rounded shadow">
+                    <source src={fileUrl} type={file.file_type} />
+                  </audio>
+                )}
+                {fileType === 'pdf' && (
+                  <iframe src={fileUrl} title={file.file_name} width="100%" height="300" className="rounded shadow"></iframe>
+                )}
+                {fileType === 'file' && (
+                  <div className="flex gap-2">
+                    <span className="text-gray-600 text-sm">{file.file_type}</span>
+                    <button
+                      onClick={() => downloadFile(project.id, file.id, file.file_name)}
+                      className="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600"
+                    >
+                      ⬇️ Télécharger
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -171,10 +232,19 @@ function ProjectsPage() {
         <textarea name="summary_fr" placeholder="Résumé FR" value={formData.summary_fr} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
         <textarea name="summary_en" placeholder="Résumé EN" value={formData.summary_en} onChange={handleInputChange} className="block w-full mb-2 p-2 border" required></textarea>
         
-        {/* Upload de fichier */}
-        <label className="block mb-2 font-bold">📎 Joindre un fichier (optionnel)</label>
-        <input type="file" onChange={handleFileChange} className="block w-full mb-2 p-2 border" />
-        {file && <p className="text-blue-600 mb-2">✅ Fichier sélectionné: {file.name}</p>}
+        {/* Upload de fichiers MULTIPLES */}
+        <label className="block mb-2 font-bold">📎 Joindre des fichiers (optionnel - plusieurs fichiers acceptés)</label>
+        <input type="file" onChange={handleFileChange} multiple className="block w-full mb-2 p-2 border" />
+        {files.length > 0 && (
+          <div className="bg-green-100 p-2 rounded mb-2">
+            <p className="text-green-700">✅ {files.length} fichier(s) sélectionné(s):</p>
+            <ul className="text-sm">
+              {files.map((f, idx) => (
+                <li key={idx}>• {f.name}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         
         <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Ajouter</button>
       </form>
@@ -188,7 +258,7 @@ function ProjectsPage() {
               <h3 className="text-xl font-semibold">{project.title_fr}</h3>
               <p className="text-gray-600"><strong>Code:</strong> {project.code_anr}</p>
               <p className="text-gray-600"><strong>Résumé:</strong> {project.summary_fr}</p>
-              {renderFilePreview(project)}
+              {renderFilePreview(project, projectFiles[project.id])}
             </li>
           ))}
         </ul>
