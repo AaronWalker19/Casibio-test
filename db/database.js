@@ -30,6 +30,31 @@ db.serialize(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Table séparée pour les fichiers (supports plusieurs fichiers par projet)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      file_data BLOB,
+      file_name TEXT,
+      file_display_name TEXT,
+      file_type TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Ajouter les colonnes si elles n'existent pas (pour les BD existantes)
+  db.run(`ALTER TABLE projects ADD COLUMN file_data BLOB`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_data ajoutée");
+  });
+  db.run(`ALTER TABLE projects ADD COLUMN file_name TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_name ajoutée");
+  });
+  db.run(`ALTER TABLE projects ADD COLUMN file_type TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column")) console.log("file_type ajoutée");
+  });
 });
 
 module.exports = db;
