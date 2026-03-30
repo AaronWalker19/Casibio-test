@@ -13,6 +13,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Création des tables
 db.serialize(() => {
+  // Table des utilisateurs
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT DEFAULT 'member',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Table des projets
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +40,10 @@ db.serialize(() => {
       results_en TEXT,
       perspectives_fr TEXT,
       perspectives_en TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_by INTEGER,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
     )
   `);
 

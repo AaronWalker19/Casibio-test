@@ -7,6 +7,7 @@ const multer = require("multer");
 const upload = multer({ 
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
 });
+const { authenticateToken, requireAdmin } = require("../middleware/auth");
 
 // Log pour déboguer les requêtes
 router.use((req, res, next) => {
@@ -16,6 +17,8 @@ router.use((req, res, next) => {
 
 // CREATE - POST /api/projects (avec fichiers optionnels)
 router.post("/", upload.array("files"), (req, res) => {
+// CREATE - POST /api/projects (members and admins)
+router.post("/", authenticateToken, (req, res) => {
   const {
     code_anr,
     title_fr,

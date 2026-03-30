@@ -3,13 +3,23 @@ const cors = require("cors");
 const path = require("path");
 const db = require("./db/database");
 const projectsRoutes = require("./routes/projects");
+const authRoutes = require("./routes/auth");
+
+console.log("All routes loaded successfully");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+// Logging middleware  
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.path} - Content-Type: ${req.headers['content-type']}`);
+  next();
+});
+
 // routes API PRIORITAIRE
+app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectsRoutes);
 
 app.get("/api/test", (req, res) => {
@@ -27,6 +37,15 @@ app.use((req, res) => {
 // PORT dynamique
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log("Server running on port", PORT);
+});
+
+// Garder le processus vivant
+process.on('uncaughtException', (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
