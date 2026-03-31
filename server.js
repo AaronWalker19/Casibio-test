@@ -2,8 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const db = require("./db/database");
+const initializeAdmin = require("./db/init-admin");
 const projectsRoutes = require("./routes/projects");
 const authRoutes = require("./routes/auth");
+
+// Initialize admin account on startup
+setTimeout(() => {
+  initializeAdmin();
+}, 500);
 
 console.log("All routes loaded successfully");
 
