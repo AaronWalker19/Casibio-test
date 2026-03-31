@@ -9,6 +9,6 @@ RUN npm install
 # Copier tout le projet (y compris build React déjà fait)
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "server.js"]
