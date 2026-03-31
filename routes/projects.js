@@ -15,8 +15,7 @@ router.use((req, res, next) => {
   next();
 });
 
-// CREATE - POST /api/projects (avec fichiers optionnels)
-router.post("/", upload.array("files"), (req, res) => {
+
 // CREATE - POST /api/projects (members and admins)
 router.post("/", authenticateToken, (req, res) => {
   const {

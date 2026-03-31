@@ -1,5 +1,5 @@
 Compte Admin:
 
 👤 Nom d'utilisateur: testuser
-🔐 Mot de passe: TestPass123!
-📧 Email: test@example.com
+🔐 Mot de passe: AdminPassword123
+📧 Email: admin@example.com
