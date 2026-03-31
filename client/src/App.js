@@ -4,7 +4,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState("projects"); // "projects" | "users"
   
   // Form states
@@ -20,6 +19,8 @@ function App() {
   const [projectFiles, setProjectFiles] = useState({});
   const [editingFile, setEditingFile] = useState(null);
   const [newFileName, setNewFileName] = useState("");
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [uploadingFiles, setUploadingFiles] = useState({});
 
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -154,6 +155,122 @@ function App() {
       .catch(err => console.error("Erreur ajout projet:", err));
   };
 
+  // GESTION DES FICHIERS
+  const loadProjectFiles = (projectId, token) => {
+    fetch(`http://localhost:3000/api/projects/${projectId}/files`, {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    })
+      .then(res => res.json())
+      .then(data => {
+        setProjectFiles(prev => ({
+          ...prev,
+          [projectId]: data || []
+        }));
+      })
+      .catch(err => console.error("Erreur chargement fichiers:", err));
+  };
+
+  const handleFileUpload = async (projectId, files) => {
+    if (!files || files.length === 0) return;
+
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    try {
+      setUploadingFiles(prev => ({ ...prev, [projectId]: true }));
+      
+      const response = await fetch(`http://localhost:3000/api/projects/${projectId}/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        alert("Erreur: " + data.error);
+      } else {
+        alert(data.message);
+        loadProjectFiles(projectId, token);
+      }
+    } catch (err) {
+      console.error("Erreur upload:", err);
+      alert("Erreur lors de l'upload");
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [projectId]: false }));
+    }
+  };
+
+  const handleDownloadFile = (projectId, fileId, fileName) => {
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/download`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      })
+      .catch(err => console.error("Erreur téléchargement:", err));
+  };
+
+  const handleRenameFile = (projectId, fileId) => {
+    if (!newFileName.trim()) return;
+
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/rename`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ new_name: newFileName })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert("Fichier renommé");
+          setEditingFile(null);
+          setNewFileName("");
+          loadProjectFiles(projectId, token);
+        }
+      })
+      .catch(err => console.error("Erreur renommage:", err));
+  };
+
+  const handleDeleteFile = (projectId, fileId) => {
+    if (!window.confirm("Confirmer la suppression du fichier?")) return;
+
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert("Fichier supprimé");
+          loadProjectFiles(projectId, token);
+        }
+      })
+      .catch(err => console.error("Erreur suppression:", err));
+  };
+
   // GESTION UTILISATEURS
   const handleChangeRole = (userId, newRole) => {
     const token = localStorage.getItem("token");
@@ -261,7 +378,7 @@ function App() {
         )}
 
         {/* PROJETS */}
-        {!user || currentView === "projects" && (
+        {(!user || currentView === "projects") && (
           <div>
             {/* Formulaire d'ajout (membres et admins) */}
             {user && (user.role === "member" || user.role === "admin") && (
@@ -327,7 +444,82 @@ function App() {
                         <strong>Code:</strong> {project.code_anr}
                       </p>
                       <p className="text-gray-700 mb-4">{project.summary_fr}</p>
+                      
+                      {/* Bouton pour voir/masquer les détails */}
                       {user && (user.role === "member" || user.role === "admin") && (
+                        <button
+                          onClick={() => {
+                            setSelectedProject(selectedProject === project.id ? null : project.id);
+                            if (selectedProject !== project.id) {
+                              loadProjectFiles(project.id, localStorage.getItem("token"));
+                            }
+                          }}
+                          className="w-full bg-indigo-500 text-white px-3 py-2 rounded mb-3 text-sm hover:bg-indigo-600"
+                        >
+                          {selectedProject === project.id ? "➖ Masquer détails" : "➕ Voir détails"}
+                        </button>
+                      )}
+
+                      {/* Détails du projet (fichiers) */}
+                      {selectedProject === project.id && (
+                        <div className="border-t pt-4 mt-4">
+                          <h4 className="font-semibold mb-3">📁 Fichiers</h4>
+                          
+                          {/* Upload de fichiers */}
+                          <div className="mb-4">
+                            <input
+                              type="file"
+                              multiple
+                              onChange={(e) => handleFileUpload(project.id, e.target.files)}
+                              disabled={uploadingFiles[project.id]}
+                              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                            />
+                            {uploadingFiles[project.id] && <p className="text-sm text-gray-500 mt-2">Upload en cours...</p>}
+                          </div>
+
+                          {/* Liste des fichiers */}
+                          {projectFiles[project.id] && projectFiles[project.id].length > 0 ? (
+                            <ul className="space-y-2">
+                              {projectFiles[project.id].map(file => (
+                                <li key={file.id} className="flex items-center justify-between bg-gray-100 p-2 rounded text-sm">
+                                  <div className="flex-1">
+                                    {editingFile === file.id ? (
+                                      <input
+                                        type="text"
+                                        value={newFileName}
+                                        onChange={(e) => setNewFileName(e.target.value)}
+                                        className="w-full p-1 border border-gray-300 rounded text-sm"
+                                      />
+                                    ) : (
+                                      <span className="cursor-pointer hover:text-indigo-600" onClick={() => handleDownloadFile(project.id, file.id, file.file_display_name)}>
+                                        📄 {file.file_display_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    {editingFile === file.id ? (
+                                      <>
+                                        <button onClick={() => handleRenameFile(project.id, file.id)} className="text-green-600 hover:text-green-700 text-xs">✓</button>
+                                        <button onClick={() => setEditingFile(null)} className="text-gray-600 hover:text-gray-700 text-xs">✕</button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button onClick={() => { setEditingFile(file.id); setNewFileName(file.file_display_name); }} className="text-blue-600 hover:text-blue-700 text-xs">✏️</button>
+                                        <button onClick={() => handleDownloadFile(project.id, file.id, file.file_display_name)} className="text-indigo-600 hover:text-indigo-700 text-xs">⬇️</button>
+                                        <button onClick={() => handleDeleteFile(project.id, file.id)} className="text-red-600 hover:text-red-700 text-xs">🗑️</button>
+                                      </>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-500">Aucun fichier</p>
+                          )}
+                        </div>
+                      )}
+
+                      {user && (user.role === "member" || user.role === "admin") && selectedProject !== project.id && (
                         <div className="flex gap-2">
                           <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
                             ✏️ Modifier

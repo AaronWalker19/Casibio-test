@@ -17,7 +17,7 @@ router.use((req, res, next) => {
 
 
 // CREATE - POST /api/projects (members and admins)
-router.post("/", authenticateToken, (req, res) => {
+router.post("/", authenticateToken, upload.array("files"), (req, res) => {
   const {
     code_anr,
     title_fr,
@@ -55,6 +55,58 @@ router.post("/", authenticateToken, (req, res) => {
     }
 
     res.json({ id: projectId, message: "Projet créé avec succès" });
+  });
+});
+
+// UPLOAD FILES TO EXISTING PROJECT - POST /api/projects/:projectId/upload
+router.post("/:projectId/upload", authenticateToken, upload.array("files"), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: "Aucun fichier fourni" });
+  }
+
+  const projectId = req.params.projectId;
+
+  // Vérifier que le projet existe
+  db.get("SELECT id FROM projects WHERE id = ?", [projectId], (err, project) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!project) {
+      return res.status(404).json({ error: "Projet non trouvé" });
+    }
+
+    const fileSql = `
+      INSERT INTO project_files
+      (project_id, file_data, file_name, file_display_name, file_type)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    let uploadedCount = 0;
+    let errorCount = 0;
+
+    req.files.forEach((file) => {
+      db.run(fileSql, [projectId, file.buffer, file.originalname, file.originalname, file.mimetype], (err) => {
+        if (err) {
+          errorCount++;
+          console.error("Erreur insertion fichier:", err);
+        } else {
+          uploadedCount++;
+        }
+
+        if (uploadedCount + errorCount === req.files.length) {
+          if (errorCount === 0) {
+            res.json({ message: `${uploadedCount} fichier(s) ajouté(s) avec succès` });
+          } else {
+            res.status(207).json({ 
+              message: `${uploadedCount} fichier(s) ajouté(s), ${errorCount} erreur(s)`,
+              uploaded: uploadedCount,
+              errors: errorCount
+            });
+          }
+        }
+      });
+    });
   });
 });
 
