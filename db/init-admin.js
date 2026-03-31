@@ -13,43 +13,30 @@ const initializeAdmin = async () => {
 
   try {
     // Vérifier si l'admin existe déjà
-    db.get(
-      "SELECT * FROM users WHERE username = ? OR email = ?",
-      [adminUsername, adminEmail],
-      async (err, row) => {
-        if (err) {
-          console.error("Erreur vérification admin:", err.message);
-          return;
-        }
+    const stmt = db.prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+    const row = stmt.get(adminUsername, adminEmail);
 
-        if (row) {
-          console.log("✓ Admin existe déjà");
-          return;
-        }
+    if (row) {
+      console.log("✓ Admin existe déjà");
+      return;
+    }
 
-        // Créer le nouvel admin
-        try {
-          const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+    // Créer le nouvel admin
+    try {
+      const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
 
-          db.run(
-            `INSERT INTO users (username, email, password_hash, role)
-             VALUES (?, ?, ?, ?)`,
-            [adminUsername, adminEmail, passwordHash, "admin"],
-            function (err) {
-              if (err) {
-                console.error("Erreur création admin:", err.message);
-              } else {
-                console.log(
-                  `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}`
-                );
-              }
-            }
-          );
-        } catch (hashErr) {
-          console.error("Erreur hash password:", hashErr.message);
-        }
-      }
-    );
+      const insertStmt = db.prepare(
+        `INSERT INTO users (username, email, password_hash, role)
+         VALUES (?, ?, ?, ?)`
+      );
+      insertStmt.run(adminUsername, adminEmail, passwordHash, "admin");
+
+      console.log(
+        `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}`
+      );
+    } catch (hashErr) {
+      console.error("Erreur hash password:", hashErr.message);
+    }
   } catch (error) {
     console.error("Erreur initialization admin:", error.message);
   }

@@ -13,10 +13,10 @@ router.use((req, res, next) => {
 });
 
 // Helper: Vérifier si premier admin
-const checkFirstUser = (callback) => {
-  db.get("SELECT COUNT(*) as count FROM users", [], (err, row) => {
-    callback(!err && row.count === 0);
-  });
+const checkFirstUser = () => {
+  const stmt = db.prepare("SELECT COUNT(*) as count FROM users");
+  const row = stmt.get();
+  return row.count === 0;
 };
 
 // REGISTER - POST /api/auth/register
@@ -29,7 +29,9 @@ router.post("/register", (req, res) => {
     return res.status(400).json({ error: "Champs requis manquants" });
   }
 
-  checkFirstUser((isFirstUser) => {
+  try {
+    const isFirstUser = checkFirstUser();
+
     // Si ce n'est pas le premier user, vérifier l'authentification admin
     if (!isFirstUser) {
       const authHeader = req.headers["authorization"];
@@ -46,43 +48,43 @@ router.post("/register", (req, res) => {
         if (err || user.role !== "admin") {
           return res.status(403).json({ error: "Accès refusé - Admin requis" });
         }
-        continueRegister();
       });
-    } else {
-      continueRegister();
     }
 
-    function continueRegister() {
-      const userRole = isFirstUser ? "admin" : "member";
+    const userRole = isFirstUser ? "admin" : "member";
 
-      bcrypt.hash(password, SALT_ROUNDS, (err, hash) => {
-        if (err) {
-          return res.status(500).json({ error: "Erreur hachage" });
-        }
+    // Hash password
+    bcrypt.hash(password, SALT_ROUNDS, (err, hash) => {
+      if (err) {
+        return res.status(500).json({ error: "Erreur hachage" });
+      }
 
+      try {
         const sql = `
           INSERT INTO users (username, email, password_hash, role)
           VALUES (?, ?, ?, ?)
         `;
 
-        db.run(sql, [username, email, hash, userRole], function(err) {
-          if (err) {
-            if (err.message.includes("UNIQUE")) {
-              return res.status(400).json({ error: "Utilisateur ou email déjà existant" });
-            }
-            return res.status(500).json({ error: err.message });
-          }
+        const stmt = db.prepare(sql);
+        const result = stmt.run(username, email, hash, userRole);
 
-          const token = generateToken(this.lastID, username, userRole);
-          res.json({
-            message: "Utilisateur créé",
-            token,
-            user: { id: this.lastID, username, email, role: userRole }
-          });
+        const newUserId = result.lastInsertRowid;
+        const tokenJwt = generateToken(newUserId, username, userRole);
+        res.json({
+          message: "Utilisateur créé",
+          token: tokenJwt,
+          user: { id: newUserId, username, email, role: userRole }
         });
-      });
-    }
-  });
+      } catch (err) {
+        if (err.message.includes("UNIQUE")) {
+          return res.status(400).json({ error: "Utilisateur ou email déjà existant" });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // LOGIN - POST /api/auth/login
@@ -93,8 +95,11 @@ router.post("/login", (req, res) => {
     return res.status(400).json({ error: "Utilisateur et mot de passe requis" });
   }
 
-  db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
-    if (err || !user) {
+  try {
+    const stmt = db.prepare("SELECT * FROM users WHERE username = ?");
+    const user = stmt.get(username);
+
+    if (!user) {
       return res.status(401).json({ error: "Utilisateur non trouvé" });
     }
 
@@ -110,7 +115,9 @@ router.post("/login", (req, res) => {
         user: { id: user.id, username: user.username, email: user.email, role: user.role }
       });
     });
-  });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // GET CURRENT USER - GET /api/auth/me
@@ -120,12 +127,13 @@ router.get("/me", authenticateToken, (req, res) => {
 
 // GET ALL USERS - GET /api/auth/users (admin only)
 router.get("/users", authenticateToken, requireAdmin, (req, res) => {
-  db.all("SELECT id, username, email, role, created_at FROM users", [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    const stmt = db.prepare("SELECT id, username, email, role, created_at FROM users");
+    const rows = stmt.all();
     res.json(rows);
-  });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // UPDATE USER ROLE - PUT /api/auth/users/:id (admin only)
@@ -137,23 +145,25 @@ router.put("/users/:id", authenticateToken, requireAdmin, (req, res) => {
     return res.status(400).json({ error: "Rôle invalide" });
   }
 
-  const sql = "UPDATE users SET role = ? WHERE id = ?";
-  db.run(sql, [role, req.params.id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    const sql = "UPDATE users SET role = ? WHERE id = ?";
+    const stmt = db.prepare(sql);
+    stmt.run(role, req.params.id);
     res.json({ message: "Rôle mis à jour" });
-  });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE USER - DELETE /api/auth/users/:id (admin only)
 router.delete("/users/:id", authenticateToken, requireAdmin, (req, res) => {
-  db.run("DELETE FROM users WHERE id = ?", [req.params.id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    const stmt = db.prepare("DELETE FROM users WHERE id = ?");
+    stmt.run(req.params.id);
     res.json({ message: "Utilisateur supprimé" });
-  });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

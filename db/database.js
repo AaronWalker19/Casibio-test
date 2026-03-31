@@ -1,20 +1,22 @@
-const sqlite3 = require("sqlite3").verbose();
+const Database = require("better-sqlite3");
 const path = require("path");
 
 const dbPath = path.join(__dirname, "database.sqlite");
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error("Erreur connexion DB:", err.message);
-  } else {
-    console.log("Connecté à SQLite");
-  }
-});
+let db;
+
+try {
+  db = new Database(dbPath);
+  console.log("Connecté à SQLite");
+} catch (err) {
+  console.error("Erreur connexion DB:", err.message);
+  process.exit(1);
+}
 
 // Création des tables
-db.serialize(() => {
+try {
   // Table des utilisateurs
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -26,7 +28,7 @@ db.serialize(() => {
   `);
 
   // Table des projets
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code_anr TEXT,
@@ -48,7 +50,7 @@ db.serialize(() => {
   `);
 
   // Table séparée pour les fichiers (supports plusieurs fichiers par projet)
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS project_files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
@@ -62,15 +64,26 @@ db.serialize(() => {
   `);
 
   // Ajouter les colonnes si elles n'existent pas (pour les BD existantes)
-  db.run(`ALTER TABLE projects ADD COLUMN file_data BLOB`, (err) => {
-    if (err && !err.message.includes("duplicate column")) console.log("file_data ajoutée");
-  });
-  db.run(`ALTER TABLE projects ADD COLUMN file_name TEXT`, (err) => {
-    if (err && !err.message.includes("duplicate column")) console.log("file_name ajoutée");
-  });
-  db.run(`ALTER TABLE projects ADD COLUMN file_type TEXT`, (err) => {
-    if (err && !err.message.includes("duplicate column")) console.log("file_type ajoutée");
-  });
-});
+  try {
+    db.exec(`ALTER TABLE projects ADD COLUMN file_data BLOB`);
+    console.log("file_data ajoutée");
+  } catch (err) {
+    if (!err.message.includes("duplicate column")) console.log("file_data existe déjà");
+  }
+  try {
+    db.exec(`ALTER TABLE projects ADD COLUMN file_name TEXT`);
+    console.log("file_name ajoutée");
+  } catch (err) {
+    if (!err.message.includes("duplicate column")) console.log("file_name existe déjà");
+  }
+  try {
+    db.exec(`ALTER TABLE projects ADD COLUMN file_type TEXT`);
+    console.log("file_type ajoutée");
+  } catch (err) {
+    if (!err.message.includes("duplicate column")) console.log("file_type existe déjà");
+  }
+} catch (err) {
+  console.error("Erreur création tables:", err.message);
+}
 
 module.exports = db;
