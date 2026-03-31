@@ -2,21 +2,12 @@ FROM node:18
 
 WORKDIR /app
 
-# Copier package.json
-COPY package*.json ./
-
 # Installer dépendances serveur
+COPY package*.json ./
 RUN npm install
 
-# Copier tout le projet
+# Copier tout le projet (y compris build React déjà fait)
 COPY . .
-
-# Build React
-WORKDIR /app/client
-RUN npm install && npm run build
-
-# Revenir à la racine
-WORKDIR /app
 
 EXPOSE 3000
 
