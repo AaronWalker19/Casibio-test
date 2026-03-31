@@ -133,6 +133,7 @@ router.get("/:projectId", (req, res) => {
 });
 
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
+// PUBLIC - accessible à tous (visiteurs et authentifiés)
 router.get("/:projectId/files", (req, res) => {
   db.all("SELECT id, file_name, file_display_name, file_type FROM project_files WHERE project_id = ? ORDER BY created_at", [req.params.projectId], (err, rows) => {
     if (err) {
@@ -144,6 +145,7 @@ router.get("/:projectId/files", (req, res) => {
 });
 
 // DOWNLOAD FILE - GET /api/projects/:projectId/file/:fileId/download
+// PUBLIC - accessible à tous (visiteurs et authentifiés)
 router.get("/:projectId/file/:fileId/download", (req, res) => {
   db.get("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err, row) => {
     if (err) {
@@ -161,6 +163,7 @@ router.get("/:projectId/file/:fileId/download", (req, res) => {
 });
 
 // VIEW FILE - GET /api/projects/:projectId/file/:fileId/view
+// PUBLIC - accessible à tous pour consultation (images, vidéos, audio, PDFs)
 router.get("/:projectId/file/:fileId/view", (req, res) => {
   db.get("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err, row) => {
     if (err) {
@@ -178,7 +181,8 @@ router.get("/:projectId/file/:fileId/view", (req, res) => {
 });
 
 // RENAME FILE - PUT /api/projects/:projectId/file/:fileId/rename
-router.put("/:projectId/file/:fileId/rename", (req, res) => {
+// PROTECTED - authentification requise
+router.put("/:projectId/file/:fileId/rename", authenticateToken, (req, res) => {
   const { new_name } = req.body;
 
   if (!new_name) {
@@ -195,7 +199,8 @@ router.put("/:projectId/file/:fileId/rename", (req, res) => {
 });
 
 // DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
-router.delete("/:projectId/file/:fileId", (req, res) => {
+// PROTECTED - authentification requise
+router.delete("/:projectId/file/:fileId", authenticateToken, (req, res) => {
   db.run("DELETE FROM project_files WHERE id = ? AND project_id = ?", [req.params.fileId, req.params.projectId], (err) => {
     if (err) {
       return res.status(500).json({ error: err.message });

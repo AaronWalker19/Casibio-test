@@ -16,6 +16,7 @@ function App() {
     summary_fr: "",
     summary_en: ""
   });
+  const [projectFormFiles, setProjectFormFiles] = useState([]); // Fichiers à ajouter lors de la création
   const [projectFiles, setProjectFiles] = useState({});
   const [editingFile, setEditingFile] = useState(null);
   const [newFileName, setNewFileName] = useState("");
@@ -35,9 +36,11 @@ function App() {
       if (savedUser.role === "admin") {
         loadUsers(savedToken);
       }
+    } else {
+      // Toujours charger les projets pour les visiteurs
+      loadProjects(null);
     }
-    // Toujours charger les projets pour les visiteurs
-    loadProjects(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadProjects = (token) => {
@@ -45,7 +48,9 @@ function App() {
       headers: token ? { "Authorization": `Bearer ${token}` } : {}
     })
       .then(res => res.json())
-      .then(data => setProjects(data || []))
+      .then(data => {
+        setProjects(data || []);
+      })
       .catch(err => console.error("Erreur chargement projets:", err));
   };
 
@@ -135,13 +140,27 @@ function App() {
     e.preventDefault();
     const token = localStorage.getItem("token");
 
+    // Préparer FormData avec les données du projet et les fichiers
+    const formData = new FormData();
+    formData.append("code_anr", projectForm.code_anr);
+    formData.append("title_fr", projectForm.title_fr);
+    formData.append("title_en", projectForm.title_en);
+    formData.append("summary_fr", projectForm.summary_fr);
+    formData.append("summary_en", projectForm.summary_en);
+
+    // Ajouter les fichiers s'il y en a
+    if (projectFormFiles.length > 0) {
+      for (let i = 0; i < projectFormFiles.length; i++) {
+        formData.append("files", projectFormFiles[i]);
+      }
+    }
+
     fetch("http://localhost:3000/api/projects", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify(projectForm)
+      body: formData
     })
       .then(res => res.json())
       .then(data => {
@@ -149,6 +168,7 @@ function App() {
           alert(data.error);
         } else {
           setProjectForm({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+          setProjectFormFiles([]);
           loadProjects(token);
         }
       })
@@ -206,11 +226,28 @@ function App() {
     }
   };
 
+  const getFileType = (mimeType, fileName) => {
+    // Déterminer le type de fichier pour affichage approprié
+    if (!mimeType && fileName) {
+      const ext = fileName.split('.').pop().toLowerCase();
+      // Images
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image';
+      // Vidéos
+      if (['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv'].includes(ext)) return 'video';
+      // Audio
+      if (['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'].includes(ext)) return 'audio';
+      return 'download';
+    }
+    
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    if (mimeType === 'application/pdf') return 'pdf';
+    return 'download';
+  };
+
   const handleDownloadFile = (projectId, fileId, fileName) => {
-    const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/download`, {
-      headers: { "Authorization": `Bearer ${token}` }
-    })
+    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/download`)
       .then(res => res.blob())
       .then(blob => {
         const url = window.URL.createObjectURL(blob);
@@ -307,7 +344,7 @@ function App() {
   };
 
   const handleSaveProject = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!editingProject) return;
 
     const token = localStorage.getItem("token");
@@ -486,6 +523,30 @@ function App() {
                   className="w-full p-2 border border-gray-300 rounded mt-2 focus:outline-none focus:border-indigo-600"
                   required
                 ></textarea>
+                
+                {/* Upload de fichiers dans le formulaire */}
+                {!editingProject && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">📎 Ajouter des fichiers (optionnel)</label>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => setProjectFormFiles(Array.from(e.target.files || []))}
+                      className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+                    />
+                    {projectFormFiles.length > 0 && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                        <p className="font-semibold text-blue-700">{projectFormFiles.length} fichier(s) sélectionné(s)</p>
+                        <ul className="mt-1 text-blue-600 list-disc list-inside">
+                          {projectFormFiles.map((file, idx) => (
+                            <li key={idx} className="text-xs">{file.name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded mt-4 font-semibold hover:bg-indigo-700">
                   {editingProject ? "Sauvegarder" : "Ajouter"}
                 </button>
@@ -513,14 +574,112 @@ function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {projects.map(project => (
                     <div key={project.id} className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                      <h3 className="text-xl font-semibold text-indigo-600 mb-2">{project.title_fr}</h3>
-                      <p className="text-sm text-gray-600 mb-2">
-                        <strong>Code:</strong> {project.code_anr}
-                      </p>
-                      <p className="text-gray-700 mb-4">{project.summary_fr}</p>
+                      {/* Mode édition - Afficher les champs de modification */}
+                      {editingProject === project.id ? (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-bold text-indigo-600 mb-6">✏️ Modifier le projet</h3>
+                          
+                          {/* Code ANR */}
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">📌 Code ANR</label>
+                            <input
+                              type="text"
+                              placeholder="Entrez le code ANR"
+                              value={projectForm.code_anr}
+                              onChange={(e) => setProjectForm({ ...projectForm, code_anr: e.target.value })}
+                              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-600"
+                            />
+                          </div>
+                          
+                          {/* Titre FR/EN */}
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">📝 Titre du projet</label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs text-gray-600 mb-1 block">FR Français</label>
+                                <input
+                                  type="text"
+                                  placeholder="Titre FR"
+                                  value={projectForm.title_fr}
+                                  onChange={(e) => setProjectForm({ ...projectForm, title_fr: e.target.value })}
+                                  className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-600"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-600 mb-1 block">EN English</label>
+                                <input
+                                  type="text"
+                                  placeholder="Titre EN"
+                                  value={projectForm.title_en}
+                                  onChange={(e) => setProjectForm({ ...projectForm, title_en: e.target.value })}
+                                  className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-600"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Résumé FR/EN */}
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Résumé du projet</label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs text-gray-600 mb-1 block">FR Français</label>
+                                <textarea
+                                  placeholder="Résumé FR"
+                                  value={projectForm.summary_fr}
+                                  onChange={(e) => setProjectForm({ ...projectForm, summary_fr: e.target.value })}
+                                  className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-600"
+                                  rows="3"
+                                ></textarea>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-600 mb-1 block">EN English</label>
+                                <textarea
+                                  placeholder="Résumé EN"
+                                  value={projectForm.summary_en}
+                                  onChange={(e) => setProjectForm({ ...projectForm, summary_en: e.target.value })}
+                                  className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-600"
+                                  rows="3"
+                                ></textarea>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-4">
+                            <button
+                              onClick={handleSaveProject}
+                              className="flex-1 bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700"
+                            >
+                              ✓ Sauvegarder
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingProject(null);
+                                setProjectForm({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+                              }}
+                              className="flex-1 bg-gray-500 text-white py-2 rounded font-semibold hover:bg-gray-600"
+                            >
+                              ✕ Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Mode affichage normal */
+                        <>
+                          <h3 className="text-xl font-semibold text-indigo-600 mb-2">{project.title_fr}</h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <strong>Code:</strong> {project.code_anr}
+                          </p>
+                          <p className="text-gray-700 mb-4">{project.summary_fr}</p>
+                        </>
+                      )}
                       
-                      {/* Bouton pour voir/masquer les détails */}
-                      {user && (user.role === "member" || user.role === "admin") && (
+                      {/* Afficher les boutons et fichiers uniquement si pas en édition */}
+                      {editingProject !== project.id && (
+                        <>
+                          {/* Boutons d'action - Voir fichiers et Upload rapide */}
+                          <div className="flex gap-2 mb-3">
                         <button
                           onClick={() => {
                             setSelectedProject(selectedProject === project.id ? null : project.id);
@@ -528,65 +687,136 @@ function App() {
                               loadProjectFiles(project.id, localStorage.getItem("token"));
                             }
                           }}
-                          className="w-full bg-indigo-500 text-white px-3 py-2 rounded mb-3 text-sm hover:bg-indigo-600"
+                          className="flex-1 bg-indigo-500 text-white px-3 py-2 rounded text-sm hover:bg-indigo-600"
                         >
-                          {selectedProject === project.id ? "➖ Masquer détails" : "➕ Voir détails"}
+                          {selectedProject === project.id ? "➖ Masquer" : "➕ Voir fichiers"}
                         </button>
-                      )}
-
-                      {/* Détails du projet (fichiers) */}
-                      {selectedProject === project.id && (
-                        <div className="border-t pt-4 mt-4">
-                          <h4 className="font-semibold mb-3">📁 Fichiers</h4>
-                          
-                          {/* Upload de fichiers */}
-                          <div className="mb-4">
+                        
+                        {/* Bouton upload rapide - Seulement si connecté */}
+                        {user && (user.role === "member" || user.role === "admin") && (
+                          <label className="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600 cursor-pointer inline-flex items-center">
+                            <span>📤 Upload</span>
                             <input
                               type="file"
                               multiple
                               onChange={(e) => handleFileUpload(project.id, e.target.files)}
                               disabled={uploadingFiles[project.id]}
-                              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                              className="hidden"
                             />
-                            {uploadingFiles[project.id] && <p className="text-sm text-gray-500 mt-2">Upload en cours...</p>}
-                          </div>
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Détails du projet (fichiers) - Visible pour TOUS */}
+                      {selectedProject === project.id && (
+                        <div className="border-t pt-4 mt-4">
+                          <h4 className="font-semibold mb-3">📁 Fichiers</h4>
+                          
+                          {/* Upload de fichiers - Seulement si connecté */}
+                          {user && (user.role === "member" || user.role === "admin") && (
+                            <div className="mb-4">
+                              <input
+                                type="file"
+                                multiple
+                                onChange={(e) => handleFileUpload(project.id, e.target.files)}
+                                disabled={uploadingFiles[project.id]}
+                                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                              />
+                              {uploadingFiles[project.id] && <p className="text-sm text-gray-500 mt-2">Upload en cours...</p>}
+                            </div>
+                          )}
 
                           {/* Liste des fichiers */}
                           {projectFiles[project.id] && projectFiles[project.id].length > 0 ? (
-                            <ul className="space-y-2">
-                              {projectFiles[project.id].map(file => (
-                                <li key={file.id} className="flex items-center justify-between bg-gray-100 p-2 rounded text-sm">
-                                  <div className="flex-1">
-                                    {editingFile === file.id ? (
-                                      <input
-                                        type="text"
-                                        value={newFileName}
-                                        onChange={(e) => setNewFileName(e.target.value)}
-                                        className="w-full p-1 border border-gray-300 rounded text-sm"
-                                      />
-                                    ) : (
-                                      <span className="cursor-pointer hover:text-indigo-600" onClick={() => handleDownloadFile(project.id, file.id, file.file_display_name)}>
-                                        📄 {file.file_display_name}
-                                      </span>
+                            <div className="space-y-3">
+                              {projectFiles[project.id].map(file => {
+                                const fileType = getFileType(file.file_type, file.file_display_name);
+                                const viewUrl = `http://localhost:3000/api/projects/${project.id}/file/${file.id}/view`;
+                                
+                                return (
+                                  <div key={file.id} className="bg-gray-50 p-3 rounded border border-gray-200">
+                                    {/* Édition du nom - Seulement si connecté */}
+                                    {user && (user.role === "member" || user.role === "admin") && editingFile === file.id ? (
+                                      <div className="flex gap-2 mb-2">
+                                        <input
+                                          type="text"
+                                          value={newFileName}
+                                          onChange={(e) => setNewFileName(e.target.value)}
+                                          className="flex-1 p-1 border border-gray-300 rounded text-sm"
+                                        />
+                                        <button onClick={() => handleRenameFile(project.id, file.id)} className="text-green-600 hover:text-green-700 text-xs px-2 py-1 bg-green-50 rounded">✓ Valider</button>
+                                        <button onClick={() => setEditingFile(null)} className="text-gray-600 hover:text-gray-700 text-xs px-2 py-1 bg-gray-200 rounded">✕ Annuler</button>
+                                      </div>
+                                    ) : null}
+                                    
+                                    {/* Affichage selon le type de fichier */}
+                                    {fileType === 'image' && (
+                                      <div className="mb-2">
+                                        <img src={viewUrl} alt={file.file_display_name} className="max-w-full h-auto rounded border border-gray-300" style={{ maxHeight: '300px' }} />
+                                        <p className="text-xs text-gray-600 mt-1">🖼️ {file.file_display_name}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {fileType === 'video' && (
+                                      <div className="mb-2">
+                                        <video controls className="max-w-full h-auto rounded border border-gray-300" style={{ maxHeight: '300px' }}>
+                                          <source src={viewUrl} type={file.file_type} />
+                                          Votre navigateur ne supporte pas la lecture vidéo.
+                                        </video>
+                                        <p className="text-xs text-gray-600 mt-1">🎬 {file.file_display_name}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {fileType === 'audio' && (
+                                      <div className="mb-2">
+                                        <audio controls className="w-full rounded">
+                                          <source src={viewUrl} type={file.file_type} />
+                                          Votre navigateur ne supporte pas la lecture audio.
+                                        </audio>
+                                        <p className="text-xs text-gray-600 mt-1">🎵 {file.file_display_name}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {fileType === 'pdf' && (
+                                      <div className="mb-2">
+                                        <iframe src={viewUrl} className="w-full rounded border border-gray-300" style={{ height: '400px' }} title={file.file_display_name}></iframe>
+                                        <p className="text-xs text-gray-600 mt-1">📄 {file.file_display_name}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {fileType === 'download' && (
+                                      <div className="flex items-center justify-between p-2 bg-white rounded">
+                                        <span className="text-sm text-gray-700">📦 {file.file_display_name}</span>
+                                        <button 
+                                          onClick={() => handleDownloadFile(project.id, file.id, file.file_display_name)}
+                                          className="bg-indigo-600 text-white px-3 py-1 rounded text-xs hover:bg-indigo-700"
+                                        >
+                                          ⬇️ Télécharger
+                                        </button>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Actions d'édition - Seulement si connecté */}
+                                    {user && (user.role === "member" || user.role === "admin") && (
+                                      <div className="flex gap-2 mt-2 pt-2 border-t border-gray-200">
+                                        <button 
+                                          onClick={() => { setEditingFile(file.id); setNewFileName(file.file_display_name); }}
+                                          className="text-blue-600 hover:text-blue-700 text-xs px-2 py-1 bg-blue-50 rounded"
+                                        >
+                                          ✏️ Renommer
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteFile(project.id, file.id)}
+                                          className="text-red-600 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded"
+                                        >
+                                          🗑️ Supprimer
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
-                                  <div className="flex gap-1">
-                                    {editingFile === file.id ? (
-                                      <>
-                                        <button onClick={() => handleRenameFile(project.id, file.id)} className="text-green-600 hover:text-green-700 text-xs">✓</button>
-                                        <button onClick={() => setEditingFile(null)} className="text-gray-600 hover:text-gray-700 text-xs">✕</button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <button onClick={() => { setEditingFile(file.id); setNewFileName(file.file_display_name); }} className="text-blue-600 hover:text-blue-700 text-xs">✏️</button>
-                                        <button onClick={() => handleDownloadFile(project.id, file.id, file.file_display_name)} className="text-indigo-600 hover:text-indigo-700 text-xs">⬇️</button>
-                                        <button onClick={() => handleDeleteFile(project.id, file.id)} className="text-red-600 hover:text-red-700 text-xs">🗑️</button>
-                                      </>
-                                    )}
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
+                                );
+                              })}
+                            </div>
                           ) : (
                             <p className="text-sm text-gray-500">Aucun fichier</p>
                           )}
@@ -608,6 +838,8 @@ function App() {
                             🗑️ Supprimer
                           </button>
                         </div>
+                      )}
+                        </>
                       )}
                     </div>
                   ))}
