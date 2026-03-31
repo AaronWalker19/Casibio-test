@@ -205,4 +205,34 @@ router.delete("/:projectId/file/:fileId", (req, res) => {
   });
 });
 
+// UPDATE PROJECT - PUT /api/projects/:projectId
+router.put("/:projectId", authenticateToken, (req, res) => {
+  const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
+  
+  const sql = `
+    UPDATE projects 
+    SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?
+    WHERE id = ?
+  `;
+
+  db.run(sql, [code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json({ message: "Projet modifié avec succès" });
+  });
+});
+
+// DELETE PROJECT - DELETE /api/projects/:projectId
+router.delete("/:projectId", authenticateToken, (req, res) => {
+  db.run("DELETE FROM projects WHERE id = ?", [req.params.projectId], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json({ message: "Projet supprimé avec succès" });
+  });
+});
+
 module.exports = router;

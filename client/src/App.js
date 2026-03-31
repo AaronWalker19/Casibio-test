@@ -21,6 +21,7 @@ function App() {
   const [newFileName, setNewFileName] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
   const [uploadingFiles, setUploadingFiles] = useState({});
+  const [editingProject, setEditingProject] = useState(null);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -37,7 +38,6 @@ function App() {
     }
     // Toujours charger les projets pour les visiteurs
     loadProjects(null);
-    setLoading(false);
   }, []);
 
   const loadProjects = (token) => {
@@ -271,6 +271,68 @@ function App() {
       .catch(err => console.error("Erreur suppression:", err));
   };
 
+  // SUPPRESSION ET MODIFICATION DE PROJETS
+  const handleDeleteProject = (projectId) => {
+    if (!window.confirm("Confirmer la suppression du projet?")) return;
+
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/projects/${projectId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert("Projet supprimé");
+          loadProjects(token);
+        }
+      })
+      .catch(err => console.error("Erreur suppression:", err));
+  };
+
+  const handleUpdateProject = (projectId) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    setEditingProject(projectId);
+    setProjectForm({
+      code_anr: project.code_anr || "",
+      title_fr: project.title_fr || "",
+      title_en: project.title_en || "",
+      summary_fr: project.summary_fr || "",
+      summary_en: project.summary_en || ""
+    });
+  };
+
+  const handleSaveProject = (e) => {
+    e.preventDefault();
+    if (!editingProject) return;
+
+    const token = localStorage.getItem("token");
+    fetch(`http://localhost:3000/api/projects/${editingProject}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(projectForm)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert("Projet modifié");
+          setEditingProject(null);
+          setProjectForm({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+          loadProjects(token);
+        }
+      })
+      .catch(err => console.error("Erreur modification:", err));
+  };
+
   // GESTION UTILISATEURS
   const handleChangeRole = (userId, newRole) => {
     const token = localStorage.getItem("token");
@@ -380,10 +442,10 @@ function App() {
         {/* PROJETS */}
         {(!user || currentView === "projects") && (
           <div>
-            {/* Formulaire d'ajout (membres et admins) */}
+            {/* Formulaire d'ajout/modification (membres et admins) */}
             {user && (user.role === "member" || user.role === "admin") && (
-              <form onSubmit={handleAddProject} className="bg-white p-6 rounded-lg shadow mb-8">
-                <h2 className="text-2xl font-bold mb-4">➕ Ajouter un projet</h2>
+              <form onSubmit={editingProject ? handleSaveProject : handleAddProject} className="bg-white p-6 rounded-lg shadow mb-8">
+                <h2 className="text-2xl font-bold mb-4">{editingProject ? "✏️ Modifier un projet" : "➕ Ajouter un projet"}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
                     type="text"
@@ -425,8 +487,20 @@ function App() {
                   required
                 ></textarea>
                 <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded mt-4 font-semibold hover:bg-indigo-700">
-                  Ajouter
+                  {editingProject ? "Sauvegarder" : "Ajouter"}
                 </button>
+                {editingProject && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setEditingProject(null);
+                      setProjectForm({ code_anr: "", title_fr: "", title_en: "", summary_fr: "", summary_en: "" });
+                    }}
+                    className="w-full bg-gray-500 text-white py-2 rounded mt-2 font-semibold hover:bg-gray-600"
+                  >
+                    Annuler
+                  </button>
+                )}
               </form>
             )}
 
@@ -521,10 +595,16 @@ function App() {
 
                       {user && (user.role === "member" || user.role === "admin") && selectedProject !== project.id && (
                         <div className="flex gap-2">
-                          <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                          <button 
+                            type="button"
+                            onClick={() => handleUpdateProject(project.id)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
                             ✏️ Modifier
                           </button>
-                          <button className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                          <button 
+                            type="button"
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
                             🗑️ Supprimer
                           </button>
                         </div>
