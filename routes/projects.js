@@ -2,12 +2,30 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db/database");
 const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+// Créer le dossier uploads s'il n'existe pas
+const uploadsDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("Dossier uploads créé");
+}
 
 // Configuration de multer pour garder les fichiers en mémoire
 const upload = multer({ 
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
 });
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
+
+// Fonction pour générer un nom de fichier unique
+const generateUniqueFileName = (originalName) => {
+  const ext = path.extname(originalName);
+  const basename = path.basename(originalName, ext);
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  return `${basename}_${timestamp}_${random}${ext}`;
+};
 
 // Log pour déboguer les requêtes
 router.use((req, res, next) => {
@@ -37,21 +55,21 @@ router.post("/", authenticateToken, upload.array("files"), (req, res) => {
     const result = stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en);
     const projectId = result.lastInsertRowid;
 
-    // Si des fichiers sont attachés, les insérer
+    // Save files to uploads directory and insert paths into database
     if (req.files && req.files.length > 0) {
       const fileSql = `
         INSERT INTO project_files
-        (project_id, file_data, file_name, file_display_name, file_type)
+        (project_id, file_path, file_name, file_display_name, file_type)
         VALUES (?, ?, ?, ?, ?)
       `;
 
       const fileStmt = db.prepare(fileSql);
       req.files.forEach((file) => {
-        try {
-          fileStmt.run(projectId, file.buffer, file.originalname, file.originalname, file.mimetype);
-        } catch (err) {
-          console.error("Erreur insertion fichier:", err);
-        }
+        const uniqueFileName = generateUniqueFileName(file.originalname);
+        const uploadPath = path.join(uploadsDir, uniqueFileName);
+        fs.writeFileSync(uploadPath, file.buffer);
+        fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+        console.log(`Fichier sauvegardé: ${uploadPath}`);
       });
     }
 
@@ -80,33 +98,20 @@ router.post("/:projectId/upload", authenticateToken, upload.array("files"), (req
 
     const fileSql = `
       INSERT INTO project_files
-      (project_id, file_data, file_name, file_display_name, file_type)
+      (project_id, file_path, file_name, file_display_name, file_type)
       VALUES (?, ?, ?, ?, ?)
     `;
 
     const fileStmt = db.prepare(fileSql);
-    let uploadedCount = 0;
-    let errorCount = 0;
-
     req.files.forEach((file) => {
-      try {
-        fileStmt.run(projectId, file.buffer, file.originalname, file.originalname, file.mimetype);
-        uploadedCount++;
-      } catch (err) {
-        errorCount++;
-        console.error("Erreur insertion fichier:", err);
-      }
+      const uniqueFileName = generateUniqueFileName(file.originalname);
+      const uploadPath = path.join(uploadsDir, uniqueFileName);
+      fs.writeFileSync(uploadPath, file.buffer);
+      fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+      console.log(`Fichier sauvegardé: ${uploadPath}`);
     });
 
-    if (errorCount === 0) {
-      res.json({ message: `${uploadedCount} fichier(s) ajouté(s) avec succès` });
-    } else {
-      res.status(207).json({ 
-        message: `${uploadedCount} fichier(s) ajouté(s), ${errorCount} erreur(s)`,
-        uploaded: uploadedCount,
-        errors: errorCount
-      });
-    }
+    res.json({ message: "Fichiers uploadés avec succès" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -138,7 +143,7 @@ router.get("/:projectId", (req, res) => {
 // PUBLIC - accessible à tous (visiteurs et authentifiés)
 router.get("/:projectId/files", (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type FROM project_files WHERE project_id = ? ORDER BY created_at");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = stmt.all(req.params.projectId);
     res.json(rows);
   } catch (err) {
@@ -150,16 +155,16 @@ router.get("/:projectId/files", (req, res) => {
 // PUBLIC - accessible à tous (visiteurs et authentifiés)
 router.get("/:projectId/file/:fileId/download", (req, res) => {
   try {
-    const stmt = db.prepare("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
+    const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
     const row = stmt.get(req.params.fileId, req.params.projectId);
 
-    if (!row || !row.file_data) {
+    if (!row || !row.file_path) {
       return res.status(404).json({ error: "Fichier non trouvé" });
     }
 
     res.setHeader("Content-Type", row.file_type);
     res.setHeader("Content-Disposition", `attachment; filename="${row.file_name}"`);
-    res.send(row.file_data);
+    res.download(row.file_path, row.file_name);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -169,16 +174,16 @@ router.get("/:projectId/file/:fileId/download", (req, res) => {
 // PUBLIC - accessible à tous pour consultation (images, vidéos, audio, PDFs)
 router.get("/:projectId/file/:fileId/view", (req, res) => {
   try {
-    const stmt = db.prepare("SELECT file_data, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
+    const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
     const row = stmt.get(req.params.fileId, req.params.projectId);
 
-    if (!row || !row.file_data) {
+    if (!row || !row.file_path) {
       return res.status(404).json({ error: "Fichier non trouvé" });
     }
 
     res.setHeader("Content-Type", row.file_type);
     res.setHeader("Cache-Control", "public, max-age=3600");
-    res.send(row.file_data);
+    res.sendFile(row.file_path);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -206,8 +211,24 @@ router.put("/:projectId/file/:fileId/rename", authenticateToken, (req, res) => {
 // PROTECTED - authentification requise
 router.delete("/:projectId/file/:fileId", authenticateToken, (req, res) => {
   try {
-    const stmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
-    stmt.run(req.params.fileId, req.params.projectId);
+    // Récupérer le chemin du fichier avant suppression
+    const getStmt = db.prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
+    const row = getStmt.get(req.params.fileId, req.params.projectId);
+
+    // Supprimer de la base de données
+    const delStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
+    delStmt.run(req.params.fileId, req.params.projectId);
+
+    // Supprimer le fichier du disque s'il existe
+    if (row && row.file_path && fs.existsSync(row.file_path)) {
+      try {
+        fs.unlinkSync(row.file_path);
+        console.log(`Fichier supprimé du disque: ${row.file_path}`);
+      } catch (fsErr) {
+        console.error("Erreur suppression fichier disque:", fsErr);
+      }
+    }
+
     res.json({ message: "Fichier supprimé avec succès" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -236,8 +257,26 @@ router.put("/:projectId", authenticateToken, (req, res) => {
 // DELETE PROJECT - DELETE /api/projects/:projectId
 router.delete("/:projectId", authenticateToken, (req, res) => {
   try {
-    const stmt = db.prepare("DELETE FROM projects WHERE id = ?");
-    stmt.run(req.params.projectId);
+    // Récupérer tous les fichiers du projet
+    const getFilesStmt = db.prepare("SELECT file_path FROM project_files WHERE project_id = ?");
+    const files = getFilesStmt.all(req.params.projectId);
+
+    // Supprimer le projet (et ses fichiers grâce à ON DELETE CASCADE)
+    const delStmt = db.prepare("DELETE FROM projects WHERE id = ?");
+    delStmt.run(req.params.projectId);
+
+    // Supprimer les fichiers du disque
+    files.forEach(file => {
+      if (file.file_path && fs.existsSync(file.file_path)) {
+        try {
+          fs.unlinkSync(file.file_path);
+          console.log(`Fichier supprimé du disque: ${file.file_path}`);
+        } catch (fsErr) {
+          console.error("Erreur suppression fichier disque:", fsErr);
+        }
+      }
+    });
+
     res.json({ message: "Projet supprimé avec succès" });
   } catch (err) {
     return res.status(500).json({ error: err.message });

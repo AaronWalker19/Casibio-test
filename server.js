@@ -24,6 +24,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Servir les fichiers uploadés comme fichiers statiques
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // routes API PRIORITAIRE
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectsRoutes);
@@ -41,7 +44,7 @@ app.use((req, res) => {
 });
 
 // PORT dynamique
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
   console.log("Server running on port", PORT);

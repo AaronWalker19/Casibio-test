@@ -54,7 +54,6 @@ try {
     CREATE TABLE IF NOT EXISTS project_files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
-      file_data BLOB,
       file_name TEXT,
       file_display_name TEXT,
       file_type TEXT,
@@ -63,24 +62,22 @@ try {
     )
   `);
 
-  // Ajouter les colonnes si elles n'existent pas (pour les BD existantes)
+  // Migration: Ajouter file_path column si elle n'existe pas
   try {
-    db.exec(`ALTER TABLE projects ADD COLUMN file_data BLOB`);
-    console.log("file_data ajoutée");
+    db.exec(`ALTER TABLE project_files ADD COLUMN file_path TEXT`);
+    console.log("file_path ajoutée à project_files");
   } catch (err) {
-    if (!err.message.includes("duplicate column")) console.log("file_data existe déjà");
+    if (!err.message.includes("duplicate column")) {
+      console.log("file_path existe déjà ou erreur:", err.message);
+    }
   }
+
+  // Migration: Supprimer file_data si elle existe encore
   try {
-    db.exec(`ALTER TABLE projects ADD COLUMN file_name TEXT`);
-    console.log("file_name ajoutée");
+    db.exec(`ALTER TABLE project_files DROP COLUMN file_data`);
+    console.log("file_data supprimée de project_files");
   } catch (err) {
-    if (!err.message.includes("duplicate column")) console.log("file_name existe déjà");
-  }
-  try {
-    db.exec(`ALTER TABLE projects ADD COLUMN file_type TEXT`);
-    console.log("file_type ajoutée");
-  } catch (err) {
-    if (!err.message.includes("duplicate column")) console.log("file_type existe déjà");
+    console.log("file_data n'existe pas ou déjà supprimée");
   }
 } catch (err) {
   console.error("Erreur création tables:", err.message);
