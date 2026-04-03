@@ -1,60 +1,53 @@
 const express = require("express");
-const cors = require("cors");
-const path = require("path");
-const db = require("./db/database");
-const initializeAdmin = require("./db/init-admin");
-const projectsRoutes = require("./routes/projects");
-const authRoutes = require("./routes/auth");
-
-// Initialize admin account on startup
-setTimeout(() => {
-  initializeAdmin();
-}, 500);
-
-console.log("All routes loaded successfully");
-
 const app = express();
+const initializeAdmin = require("./db/init-admin");
+const db = require("./db/database");
 
-app.use(cors());
+console.log("🚀 SERVER START");
+
+// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Logging middleware  
-app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.path} - Content-Type: ${req.headers['content-type']}`);
-  next();
-});
+// Import routes
+const authRoutes = require("./routes/auth");
+const projectRoutes = require("./routes/projects");
 
-// Servir les fichiers uploadés comme fichiers statiques
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// routes API PRIORITAIRE
+// Use routes
 app.use("/api/auth", authRoutes);
-app.use("/api/projects", projectsRoutes);
+app.use("/api/projects", projectRoutes);
 
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend OK" });
+app.get("/", (req, res) => {
+  res.send("OK CLEAN");
 });
 
-// servir React (après les routes API)
-app.use(express.static(path.join(__dirname, "client/build")));
-
-// catch-all pour React (DOIT ÊTRE DERNIER)
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "client/build/index.html"));
+// Gestion des erreurs globales
+app.use((err, req, res, next) => {
+  console.error("❌ Erreur serveur:", err);
+  res.status(500).json({ error: err.message || "Erreur interne du serveur" });
 });
 
-// PORT dynamique
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+// Initialiser la base de données puis démarrer le serveur
+async function startServer() {
+  try {
+    // Initialiser la BD
+    await db.init();
+    console.log("✓ Base de données initialisée");
+    
+    // Initialiser l'admin
+    await initializeAdmin();
+    console.log("✓ Admin initialization complete");
+    
+    // Démarrer le serveur
+    app.listen(port, () => {
+      console.log(`✓ Server running on port ${port}`);
+    });
+  } catch (err) {
+    console.error("❌ Erreur au démarrage:", err.message);
+    process.exit(1);
+  }
+}
 
-// Garder le processus vivant
-process.on('uncaughtException', (err) => {
-  console.error("Uncaught Exception:", err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
+startServer();

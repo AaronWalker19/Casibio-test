@@ -33,9 +33,8 @@ router.use((req, res, next) => {
   next();
 });
 
-
-// CREATE - POST /api/projects (members and admins)
-router.post("/", authenticateToken, upload.array("files"), (req, res) => {
+// CREATE - POST /api/projects
+router.post("/", authenticateToken, upload.array("files"), async (req, res) => {
   const {
     code_anr,
     title_fr,
@@ -47,12 +46,12 @@ router.post("/", authenticateToken, upload.array("files"), (req, res) => {
   try {
     const sql = `
       INSERT INTO projects
-      (code_anr, title_fr, title_en, summary_fr, summary_en)
-      VALUES (?, ?, ?, ?, ?)
+      (code_anr, title_fr, title_en, summary_fr, summary_en, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
     const stmt = db.prepare(sql);
-    const result = stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en);
+    const result = await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.user.userId);
     const projectId = result.lastInsertRowid;
 
     // Save files to uploads directory and insert paths into database
@@ -63,24 +62,26 @@ router.post("/", authenticateToken, upload.array("files"), (req, res) => {
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      const fileStmt = db.prepare(fileSql);
-      req.files.forEach((file) => {
+      for (const file of req.files) {
         const uniqueFileName = generateUniqueFileName(file.originalname);
         const uploadPath = path.join(uploadsDir, uniqueFileName);
         fs.writeFileSync(uploadPath, file.buffer);
-        fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+        
+        const fileStmt = db.prepare(fileSql);
+        await fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
         console.log(`Fichier sauvegardé: ${uploadPath}`);
-      });
+      }
     }
 
     res.json({ id: projectId, message: "Projet créé avec succès" });
   } catch (err) {
+    console.error("Create project error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // UPLOAD FILES TO EXISTING PROJECT - POST /api/projects/:projectId/upload
-router.post("/:projectId/upload", authenticateToken, upload.array("files"), (req, res) => {
+router.post("/:projectId/upload", authenticateToken, upload.array("files"), async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "Aucun fichier fourni" });
   }
@@ -90,7 +91,7 @@ router.post("/:projectId/upload", authenticateToken, upload.array("files"), (req
   try {
     // Vérifier que le projet existe
     const checkStmt = db.prepare("SELECT id FROM projects WHERE id = ?");
-    const project = checkStmt.get(projectId);
+    const project = await checkStmt.get(projectId);
 
     if (!project) {
       return res.status(404).json({ error: "Projet non trouvé" });
@@ -102,61 +103,64 @@ router.post("/:projectId/upload", authenticateToken, upload.array("files"), (req
       VALUES (?, ?, ?, ?, ?)
     `;
 
-    const fileStmt = db.prepare(fileSql);
-    req.files.forEach((file) => {
+    for (const file of req.files) {
       const uniqueFileName = generateUniqueFileName(file.originalname);
       const uploadPath = path.join(uploadsDir, uniqueFileName);
       fs.writeFileSync(uploadPath, file.buffer);
-      fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+      
+      const fileStmt = db.prepare(fileSql);
+      await fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
       console.log(`Fichier sauvegardé: ${uploadPath}`);
-    });
+    }
 
     res.json({ message: "Fichiers uploadés avec succès" });
   } catch (err) {
+    console.error("Upload files error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // GET ALL - GET /api/projects
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects ORDER BY created_at DESC");
-    const rows = stmt.all();
+    const rows = await stmt.all();
     res.json(rows);
   } catch (err) {
+    console.error("Get projects error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // GET ONE - GET /api/projects/:projectId
-router.get("/:projectId", (req, res) => {
+router.get("/:projectId", async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
-    const row = stmt.get(req.params.projectId);
+    const row = await stmt.get(req.params.projectId);
     res.json(row);
   } catch (err) {
+    console.error("Get project error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
-// PUBLIC - accessible à tous (visiteurs et authentifiés)
-router.get("/:projectId/files", (req, res) => {
+router.get("/:projectId/files", async (req, res) => {
   try {
     const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path FROM project_files WHERE project_id = ? ORDER BY created_at");
-    const rows = stmt.all(req.params.projectId);
+    const rows = await stmt.all(req.params.projectId);
     res.json(rows);
   } catch (err) {
+    console.error("Get files error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // DOWNLOAD FILE - GET /api/projects/:projectId/file/:fileId/download
-// PUBLIC - accessible à tous (visiteurs et authentifiés)
-router.get("/:projectId/file/:fileId/download", (req, res) => {
+router.get("/:projectId/file/:fileId/download", async (req, res) => {
   try {
     const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
-    const row = stmt.get(req.params.fileId, req.params.projectId);
+    const row = await stmt.get(req.params.fileId, req.params.projectId);
 
     if (!row || !row.file_path) {
       return res.status(404).json({ error: "Fichier non trouvé" });
@@ -166,16 +170,16 @@ router.get("/:projectId/file/:fileId/download", (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${row.file_name}"`);
     res.download(row.file_path, row.file_name);
   } catch (err) {
+    console.error("Download file error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // VIEW FILE - GET /api/projects/:projectId/file/:fileId/view
-// PUBLIC - accessible à tous pour consultation (images, vidéos, audio, PDFs)
-router.get("/:projectId/file/:fileId/view", (req, res) => {
+router.get("/:projectId/file/:fileId/view", async (req, res) => {
   try {
     const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
-    const row = stmt.get(req.params.fileId, req.params.projectId);
+    const row = await stmt.get(req.params.fileId, req.params.projectId);
 
     if (!row || !row.file_path) {
       return res.status(404).json({ error: "Fichier non trouvé" });
@@ -185,13 +189,13 @@ router.get("/:projectId/file/:fileId/view", (req, res) => {
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.sendFile(row.file_path);
   } catch (err) {
+    console.error("View file error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // RENAME FILE - PUT /api/projects/:projectId/file/:fileId/rename
-// PROTECTED - authentification requise
-router.put("/:projectId/file/:fileId/rename", authenticateToken, (req, res) => {
+router.put("/:projectId/file/:fileId/rename", authenticateToken, async (req, res) => {
   const { new_name } = req.body;
 
   if (!new_name) {
@@ -200,24 +204,24 @@ router.put("/:projectId/file/:fileId/rename", authenticateToken, (req, res) => {
 
   try {
     const stmt = db.prepare("UPDATE project_files SET file_display_name = ? WHERE id = ? AND project_id = ?");
-    stmt.run(new_name, req.params.fileId, req.params.projectId);
+    await stmt.run(new_name, req.params.fileId, req.params.projectId);
     res.json({ message: "Fichier renommé avec succès" });
   } catch (err) {
+    console.error("Rename file error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
-// PROTECTED - authentification requise
-router.delete("/:projectId/file/:fileId", authenticateToken, (req, res) => {
+router.delete("/:projectId/file/:fileId", authenticateToken, async (req, res) => {
   try {
     // Récupérer le chemin du fichier avant suppression
     const getStmt = db.prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
-    const row = getStmt.get(req.params.fileId, req.params.projectId);
+    const row = await getStmt.get(req.params.fileId, req.params.projectId);
 
     // Supprimer de la base de données
     const delStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
-    delStmt.run(req.params.fileId, req.params.projectId);
+    await delStmt.run(req.params.fileId, req.params.projectId);
 
     // Supprimer le fichier du disque s'il existe
     if (row && row.file_path && fs.existsSync(row.file_path)) {
@@ -231,39 +235,41 @@ router.delete("/:projectId/file/:fileId", authenticateToken, (req, res) => {
 
     res.json({ message: "Fichier supprimé avec succès" });
   } catch (err) {
+    console.error("Delete file error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // UPDATE PROJECT - PUT /api/projects/:projectId
-router.put("/:projectId", authenticateToken, (req, res) => {
+router.put("/:projectId", authenticateToken, async (req, res) => {
   const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
   
   try {
     const sql = `
       UPDATE projects 
-      SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?
+      SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
 
     const stmt = db.prepare(sql);
-    stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId);
+    await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId);
     res.json({ message: "Projet modifié avec succès" });
   } catch (err) {
+    console.error("Update project error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 // DELETE PROJECT - DELETE /api/projects/:projectId
-router.delete("/:projectId", authenticateToken, (req, res) => {
+router.delete("/:projectId", authenticateToken, async (req, res) => {
   try {
     // Récupérer tous les fichiers du projet
     const getFilesStmt = db.prepare("SELECT file_path FROM project_files WHERE project_id = ?");
-    const files = getFilesStmt.all(req.params.projectId);
+    const files = await getFilesStmt.all(req.params.projectId);
 
     // Supprimer le projet (et ses fichiers grâce à ON DELETE CASCADE)
     const delStmt = db.prepare("DELETE FROM projects WHERE id = ?");
-    delStmt.run(req.params.projectId);
+    await delStmt.run(req.params.projectId);
 
     // Supprimer les fichiers du disque
     files.forEach(file => {
@@ -279,6 +285,7 @@ router.delete("/:projectId", authenticateToken, (req, res) => {
 
     res.json({ message: "Projet supprimé avec succès" });
   } catch (err) {
+    console.error("Delete project error:", err);
     return res.status(500).json({ error: err.message });
   }
 });

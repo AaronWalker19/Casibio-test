@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const db = require("./database");
 
 const SALT_ROUNDS = 10;
@@ -13,8 +13,11 @@ const initializeAdmin = async () => {
 
   try {
     // Vérifier si l'admin existe déjà
-    const stmt = db.prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-    const row = stmt.get(adminUsername, adminEmail);
+    const row = await db.get(
+      "SELECT * FROM users WHERE username = ? OR email = ?",
+      adminUsername,
+      adminEmail
+    );
 
     if (row) {
       console.log("✓ Admin existe déjà");
@@ -25,11 +28,14 @@ const initializeAdmin = async () => {
     try {
       const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
 
-      const insertStmt = db.prepare(
+      await db.run(
         `INSERT INTO users (username, email, password_hash, role)
-         VALUES (?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?)`,
+        adminUsername,
+        adminEmail,
+        passwordHash,
+        "admin"
       );
-      insertStmt.run(adminUsername, adminEmail, passwordHash, "admin");
 
       console.log(
         `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}`
