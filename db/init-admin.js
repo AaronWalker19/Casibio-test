@@ -13,14 +13,13 @@ const initializeAdmin = async () => {
 
   try {
     // Vérifier si l'admin existe déjà
-    const existingUser = await db.get(
-      "SELECT * FROM users WHERE username = ? OR email = ?",
-      adminUsername,
-      adminEmail
+    const checkStmt = db.prepare(
+      "SELECT id FROM users WHERE username = ? LIMIT 1"
     );
+    const existingUser = await checkStmt.get(adminUsername);
 
     if (existingUser) {
-      console.log("✓ Admin existe déjà");
+      console.log(`✓ Admin existe déjà: ${adminUsername}`);
       return;
     }
 
@@ -39,7 +38,7 @@ const initializeAdmin = async () => {
       `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}\n  Password: ${adminPassword}`
     );
   } catch (error) {
-    console.error("Erreur initialization admin:", error.message);
+    console.error("❌ Erreur initialization admin:", error.message);
   }
 };
 
