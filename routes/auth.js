@@ -64,31 +64,73 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
+  console.log("\n" + "=".repeat(60));
+  console.log("🔐 TENTATIVE DE CONNEXION");
+  console.log("=".repeat(60));
+  console.log(`📥 Données reçues:`);
+  console.log(`   Username: ${username || "(vide)"}`);
+  console.log(`   Password: ${password ? "***" : "(vide)"}`);
+
   if (!username || !password) {
+    console.log("❌ Erreur: Champs manquants\n");
     return res.status(400).json({ error: "Utilisateur et mot de passe requis" });
   }
 
   try {
+    console.log(`\n⏳ Recherche de l'utilisateur '${username}' dans la base de données...`);
     const stmt = db.prepare("SELECT * FROM users WHERE username = ?");
     const user = await stmt.get(username);
 
     if (!user) {
+      console.log(`❌ Utilisateur '${username}' non trouvé dans la base de données`);
+      console.log(`\n💡 Utilisateurs disponibles dans MySQL:`);
+      const allUsers = await db.prepare("SELECT id, username, email, role FROM users").all();
+      if (allUsers.length === 0) {
+        console.log("   ⚠️  Aucun utilisateur enregistré!");
+      } else {
+        allUsers.forEach(u => {
+          console.log(`   • ${u.username} (${u.role})`);
+        });
+      }
+      console.log("");
       return res.status(401).json({ error: "Utilisateur non trouvé" });
     }
 
+    console.log(`✓ Utilisateur trouvé:`);
+    console.log(`   ID: ${user.id}`);
+    console.log(`   Username: ${user.username}`);
+    console.log(`   Email: ${user.email}`);
+    console.log(`   Role: ${user.role}`);
+    console.log(`   Password hash: ${user.password_hash.substring(0, 20)}...`);
+
+    console.log(`\n⏳ Comparaison du mot de passe...`);
     const isMatch = await bcrypt.compare(password, user.password_hash);
+    
     if (!isMatch) {
+      console.log(`❌ Mot de passe INCORRECT`);
+      console.log(`   Votre mot de passe: ${password}`);
+      console.log(`   Hash stocké: ${user.password_hash}`);
+      console.log("");
       return res.status(401).json({ error: "Mot de passe incorrect" });
     }
 
+    console.log(`✓ Mot de passe CORRECT!`);
+    console.log(`\n⏳ Génération du token JWT...`);
     const token = generateToken(user.id, user.username, user.role);
+    
+    console.log(`✅ CONNEXION RÉUSSIE!`);
+    console.log(`   Token généré: ${token.substring(0, 30)}...`);
+    console.log("=".repeat(60) + "\n");
+
     res.json({
       message: "Connexion réussie",
       token,
       user: { id: user.id, username: user.username, email: user.email, role: user.role }
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ Erreur serveur:", error.message);
+    console.error(error);
+    console.log("=".repeat(60) + "\n");
     return res.status(500).json({ error: error.message });
   }
 });

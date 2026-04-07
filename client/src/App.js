@@ -797,7 +797,7 @@ function App() {
                             <div className="space-y-3">
                               {projectFiles[project.id].map(file => {
                                 const fileType = getFileType(file.file_type, file.file_display_name);
-                                const viewUrl = `http://localhost:3000/api/projects/${project.id}/file/${file.id}/view`;
+                                const viewUrl = `api/projects/${project.id}/file/${file.id}/view`;
                                 
                                 return (
                                   <div key={file.id} className="bg-gray-50 p-3 rounded border border-gray-200">
