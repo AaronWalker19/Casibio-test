@@ -1,9 +1,26 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db/database");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+let db;
+
+try {
+  db = require("../db/database");
+  console.log("✅ DB chargée");
+} catch (err) {
+  console.error("❌ DB FAILED:", err.message);
+}
+
+if (!db) {
+  router.get("/", (req, res) => {
+    return res.json([]);
+  });
+
+  module.exports = router;
+  return;
+}
+
 
 // Créer le dossier uploads s'il n'existe pas
 const uploadsDir = path.join(__dirname, "../uploads");

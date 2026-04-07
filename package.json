@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
+    "create-admin": "node createAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,8 +19,8 @@
     "form-data": "^4.0.5",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "node-fetch": "^2.7.0",
-    "sqlite3": "^5.1.6"
+    "mysql2": "^3.6.5",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",

@@ -1,140 +1,181 @@
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const mysql = require("mysql2/promise");
 
-// Chemin vers la base de données SQLite
-const dbPath = path.join(__dirname, "../casibio.db");
+// Configuration MySQL
+const dbConfig = {
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "casibio",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelayMs: 0
+};
 
-let db = null;
+let pool = null;
 
 /**
- * Initialise la connexion à la base de données SQLite
+ * Initialise le pool de connexions MySQL
  */
-function initializeDB() {
-  return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error("Erreur connexion DB:", err.message);
-        reject(err);
-      } else {
-        console.log("✓ Database connectée:", dbPath);
+async function initializeDB() {
+  try {
+    pool = mysql.createPool(dbConfig);
+    console.log("✓ Pool MySQL créé");
 
-        // Créer les tables si elles n'existent pas
-        db.serialize(() => {
-          db.run(`
-            CREATE TABLE IF NOT EXISTS users (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              username TEXT UNIQUE NOT NULL,
-              email TEXT UNIQUE NOT NULL,
-              password_hash TEXT NOT NULL,
-              role TEXT DEFAULT 'member',
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          `);
+    // Tester la connexion
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+    console.log("✓ Connexion à MySQL réussie");
 
-          db.run(`
-            CREATE TABLE IF NOT EXISTS projects (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name TEXT NOT NULL,
-              description TEXT,
-              created_by INTEGER,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (created_by) REFERENCES users(id)
-            )
-          `);
+    // Créer les tables
+    await createTables();
+  } catch (err) {
+    console.error("❌ Erreur connexion MySQL:", err.message);
+    throw err;
+  }
+}
 
-          db.run(`
-            CREATE TABLE IF NOT EXISTS project_files (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              project_id INTEGER NOT NULL,
-              filename TEXT NOT NULL,
-              filepath TEXT NOT NULL,
-              file_size INTEGER,
-              uploaded_by INTEGER,
-              deleted BOOLEAN DEFAULT 0,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (project_id) REFERENCES projects(id),
-              FOREIGN KEY (uploaded_by) REFERENCES users(id)
-            )
-          `, (err) => {
-            if (err) {
-              console.error("Erreur création tables:", err.message);
-              reject(err);
-            } else {
-              console.log("✓ Tables créées/vérifiées");
-              resolve();
-            }
-          });
-        });
+/**
+ * Crée les tables si elles n'existent pas
+ */
+async function createTables() {
+  if (!pool) return;
+
+  const connection = await pool.getConnection();
+
+  try {
+    // Table users
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('admin', 'member') DEFAULT 'member',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // Table projects
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code_anr VARCHAR(100),
+        title_fr VARCHAR(255),
+        title_en VARCHAR(255),
+        summary_fr TEXT,
+        summary_en TEXT,
+        methods_fr TEXT,
+        methods_en TEXT,
+        results_fr TEXT,
+        results_en TEXT,
+        perspectives_fr TEXT,
+        perspectives_en TEXT,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+        INDEX idx_code_anr (code_anr),
+        INDEX idx_created_by (created_by)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // Table project_files
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS project_files (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        project_id INT NOT NULL,
+        file_path VARCHAR(500),
+        file_name VARCHAR(255),
+        file_display_name VARCHAR(255),
+        file_type VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        INDEX idx_project_id (project_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    console.log("✓ Tables créées/vérifiées");
+  } catch (err) {
+    console.error("❌ Erreur création tables:", err.message);
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Prépare une requête SQL
+ */
+function prepare(sql) {
+  return {
+    run: async function(...params) {
+      if (!pool) throw new Error("Pool MySQL non initialisé");
+      const connection = await pool.getConnection();
+      try {
+        const [result] = await connection.execute(sql, params);
+        return {
+          lastInsertRowid: result.insertId,
+          changes: result.affectedRows
+        };
+      } finally {
+        connection.release();
       }
-    });
-  });
+    },
+
+    get: async function(...params) {
+      if (!pool) throw new Error("Pool MySQL non initialisé");
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.execute(sql, params);
+        return rows[0] || null;
+      } finally {
+        connection.release();
+      }
+    },
+
+    all: async function(...params) {
+      if (!pool) throw new Error("Pool MySQL non initialisé");
+      const connection = await pool.getConnection();
+      try {
+        const [rows] = await connection.execute(sql, params);
+        return rows;
+      } finally {
+        connection.release();
+      }
+    }
+  };
 }
 
 /**
- * Wrapper Promise pour db.run()
+ * Exécute une requête directe
  */
-function dbRun(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
+async function execute(sql, params = []) {
+  if (!pool) throw new Error("Pool MySQL non initialisé");
+  const connection = await pool.getConnection();
+  try {
+    const [result] = await connection.execute(sql, params);
+    return result;
+  } finally {
+    connection.release();
+  }
 }
 
 /**
- * Wrapper Promise pour db.get()
+ * Ferme le pool
  */
-function dbGet(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
-    });
-  });
+async function closePool() {
+  if (pool) {
+    await pool.end();
+    console.log("✓ Pool MySQL fermé");
+  }
 }
 
-/**
- * Wrapper Promise pour db.all()
- */
-function dbAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
-  });
-}
-
-/**
- * Retourne les méthodes de la base de données
- */
 module.exports = {
   init: initializeDB,
-  
-  prepare: (sql) => {
-    return {
-      run: (...params) => dbRun(sql, params),
-      get: (...params) => dbGet(sql, params),
-      all: (...params) => dbAll(sql, params)
-    };
-  },
-
-  get: (sql, ...params) => dbGet(sql, params),
-
-  all: (sql, ...params) => dbAll(sql, params),
-
-  run: (sql, ...params) => dbRun(sql, params),
-
-  exec: (sql) => {
-    return new Promise((resolve, reject) => {
-      db.exec(sql, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  },
-
-  getDb: () => db
+  prepare,
+  execute,
+  closePool,
+  pool: () => pool
 };

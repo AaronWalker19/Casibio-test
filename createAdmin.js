@@ -1,42 +1,50 @@
-const Database = require('better-sqlite3');
-const bcrypt = require('bcrypt');
-const path = require('path');
+const db = require('./db/database');
+const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, 'db', 'database.sqlite');
-const db = new Database(dbPath);
-
-console.log('Connecté à SQLite');
+const SALT_ROUNDS = 10;
 
 const createAdmin = async () => {
   try {
-    // Créer la table des utilisateurs
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        role TEXT DEFAULT 'member',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Table créée');
+    // Initialise la base de données
+    await db.init();
+    console.log('✓ Base de données initialisée');
 
-    const username = 'testuser';
-    const email = 'admin@example.com';
-    const password = 'AdminPassword123';
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const username = process.env.ADMIN_USERNAME || 'admin';
+    const email = process.env.ADMIN_EMAIL || 'admin@test.com';
+    const password = process.env.ADMIN_PASSWORD || 'admin123';
 
-    const stmt = db.prepare(
-      `INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)`
+    // Vérifier si l'admin existe déjà
+    const existingUser = await db.get(
+      'SELECT * FROM users WHERE username = ? OR email = ?',
+      username,
+      email
     );
-    stmt.run(username, email, hashedPassword, 'admin');
 
-    console.log(`✓ Compte admin créé: ${username} / ${email}`);
-    db.close();
+    if (existingUser) {
+      console.log('✓ Admin existe déjà');
+      process.exit(0);
+    }
+
+    // Hash le mot de passe
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Créer l'admin
+    const stmt = db.prepare(
+      `INSERT INTO users (username, email, password_hash, role)
+       VALUES (?, ?, ?, ?)`
+    );
+    
+    await stmt.run(username, email, passwordHash, 'admin');
+
+    console.log('\n✓✓✓ COMPTE ADMIN CRÉÉ AVEC SUCCÈS ✓✓✓');
+    console.log(`  Username: ${username}`);
+    console.log(`  Email: ${email}`);
+    console.log(`  Password: ${password}`);
+    console.log('');
+
+    process.exit(0);
   } catch (err) {
-    console.error('Erreur:', err.message);
-    db.close();
+    console.error('❌ Erreur:', err.message);
     process.exit(1);
   }
 };

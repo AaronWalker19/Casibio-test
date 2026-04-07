@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 function App() {
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
@@ -44,21 +45,32 @@ function App() {
   }, []);
 
   const loadProjects = (token) => {
-    fetch("http://localhost:3000/api/projects", {
+    fetch(`/api/projects`, {
       headers: token ? { "Authorization": `Bearer ${token}` } : {}
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         setProjects(data || []);
       })
-      .catch(err => console.error("Erreur chargement projets:", err));
+      .catch(err => {
+        console.error("Erreur chargement projets:", err);
+        setProjects([]);
+      });
   };
 
   const loadUsers = (token) => {
-    fetch("http://localhost:3000/api/auth/users", {
+    fetch(`/api/auth/users`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => setUsers(data || []))
       .catch(err => console.error("Erreur chargement users:", err));
   };
@@ -66,12 +78,15 @@ function App() {
   // AUTHENTIFICATION
   const handleLogin = (e) => {
     e.preventDefault();
-    fetch("http://localhost:3000/api/auth/login", {
+    fetch(`/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(loginForm)
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -87,14 +102,17 @@ function App() {
           setShowLoginModal(false);
         }
       })
-      .catch(err => console.error("Erreur login:", err));
+      .catch(err => {
+        console.error("Erreur login:", err);
+        alert("Erreur connexion: " + err.message);
+      });
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
     
-    fetch("http://localhost:3000/api/auth/register", {
+    fetch(`/api/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,7 +120,10 @@ function App() {
       },
       body: JSON.stringify(registerForm)
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -123,7 +144,10 @@ function App() {
           setShowLoginModal(false);
         }
       })
-      .catch(err => console.error("Erreur register:", err));
+      .catch(err => {
+        console.error("Erreur register:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   const handleLogout = () => {
@@ -155,14 +179,17 @@ function App() {
       }
     }
 
-    fetch("http://localhost:3000/api/projects", {
+    fetch(`/api/projects`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`
       },
       body: formData
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -172,12 +199,14 @@ function App() {
           loadProjects(token);
         }
       })
-      .catch(err => console.error("Erreur ajout projet:", err));
+      .catch(err => {
+        console.error("Erreur ajout projet:", err);
+        alert("Erreur: " + err.message);
+      });
   };
-
   // GESTION DES FICHIERS
   const loadProjectFiles = (projectId, token) => {
-    fetch(`http://localhost:3000/api/projects/${projectId}/files`, {
+    fetch(`/api/projects/${projectId}/files`, {
       headers: token ? { "Authorization": `Bearer ${token}` } : {}
     })
       .then(res => res.json())
@@ -203,7 +232,7 @@ function App() {
     try {
       setUploadingFiles(prev => ({ ...prev, [projectId]: true }));
       
-      const response = await fetch(`http://localhost:3000/api/projects/${projectId}/upload`, {
+      const response = await fetch(`/api/projects/${projectId}/upload`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -211,6 +240,7 @@ function App() {
         body: formData
       });
 
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       if (data.error) {
         alert("Erreur: " + data.error);
@@ -247,7 +277,7 @@ function App() {
   };
 
   const handleDownloadFile = (projectId, fileId, fileName) => {
-    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/download`)
+    fetch(`/api/projects/${projectId}/file/${fileId}/download`)
       .then(res => res.blob())
       .then(blob => {
         const url = window.URL.createObjectURL(blob);
@@ -266,7 +296,7 @@ function App() {
     if (!newFileName.trim()) return;
 
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}/rename`, {
+    fetch(`/api/projects/${projectId}/file/${fileId}/rename`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -274,7 +304,10 @@ function App() {
       },
       body: JSON.stringify({ new_name: newFileName })
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -285,18 +318,24 @@ function App() {
           loadProjectFiles(projectId, token);
         }
       })
-      .catch(err => console.error("Erreur renommage:", err));
+      .catch(err => {
+        console.error("Erreur renommage:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   const handleDeleteFile = (projectId, fileId) => {
     if (!window.confirm("Confirmer la suppression du fichier?")) return;
 
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/projects/${projectId}/file/${fileId}`, {
+    fetch(`/api/projects/${projectId}/file/${fileId}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -305,7 +344,10 @@ function App() {
           loadProjectFiles(projectId, token);
         }
       })
-      .catch(err => console.error("Erreur suppression:", err));
+      .catch(err => {
+        console.error("Erreur suppression:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   // SUPPRESSION ET MODIFICATION DE PROJETS
@@ -313,11 +355,14 @@ function App() {
     if (!window.confirm("Confirmer la suppression du projet?")) return;
 
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/projects/${projectId}`, {
+    fetch(`/api/projects/${projectId}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -326,7 +371,10 @@ function App() {
           loadProjects(token);
         }
       })
-      .catch(err => console.error("Erreur suppression:", err));
+      .catch(err => {
+        console.error("Erreur suppression:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   const handleUpdateProject = (projectId) => {
@@ -348,7 +396,7 @@ function App() {
     if (!editingProject) return;
 
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/projects/${editingProject}`, {
+    fetch(`/api/projects/${editingProject}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -356,7 +404,10 @@ function App() {
       },
       body: JSON.stringify(projectForm)
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -367,13 +418,16 @@ function App() {
           loadProjects(token);
         }
       })
-      .catch(err => console.error("Erreur modification:", err));
+      .catch(err => {
+        console.error("Erreur modification:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   // GESTION UTILISATEURS
   const handleChangeRole = (userId, newRole) => {
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/auth/users/${userId}`, {
+    fetch(`/api/auth/users/${userId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -381,7 +435,10 @@ function App() {
       },
       body: JSON.stringify({ role: newRole })
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -389,18 +446,24 @@ function App() {
           loadUsers(token);
         }
       })
-      .catch(err => console.error("Erreur:", err));
+      .catch(err => {
+        console.error("Erreur:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   const handleDeleteUser = (userId) => {
     if (!window.confirm("Confirmer la suppression?")) return;
     
     const token = localStorage.getItem("token");
-    fetch(`http://localhost:3000/api/auth/users/${userId}`, {
+    fetch(`/api/auth/users/${userId}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           alert(data.error);
@@ -408,7 +471,10 @@ function App() {
           loadUsers(token);
         }
       })
-      .catch(err => console.error("Erreur:", err));
+      .catch(err => {
+        console.error("Erreur:", err);
+        alert("Erreur: " + err.message);
+      });
   };
 
   // UI - PRINCIPALE

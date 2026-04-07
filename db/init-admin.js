@@ -13,36 +13,31 @@ const initializeAdmin = async () => {
 
   try {
     // Vérifier si l'admin existe déjà
-    const row = await db.get(
+    const existingUser = await db.get(
       "SELECT * FROM users WHERE username = ? OR email = ?",
       adminUsername,
       adminEmail
     );
 
-    if (row) {
+    if (existingUser) {
       console.log("✓ Admin existe déjà");
       return;
     }
 
-    // Créer le nouvel admin
-    try {
-      const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+    // Hash le mot de passe
+    const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
 
-      await db.run(
-        `INSERT INTO users (username, email, password_hash, role)
-         VALUES (?, ?, ?, ?)`,
-        adminUsername,
-        adminEmail,
-        passwordHash,
-        "admin"
-      );
+    // Créer l'admin
+    const stmt = db.prepare(
+      `INSERT INTO users (username, email, password_hash, role)
+       VALUES (?, ?, ?, ?)`
+    );
+    
+    await stmt.run(adminUsername, adminEmail, passwordHash, "admin");
 
-      console.log(
-        `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}`
-      );
-    } catch (hashErr) {
-      console.error("Erreur hash password:", hashErr.message);
-    }
+    console.log(
+      `✓ Admin créé avec succès\n  Username: ${adminUsername}\n  Email: ${adminEmail}\n  Password: ${adminPassword}`
+    );
   } catch (error) {
     console.error("Erreur initialization admin:", error.message);
   }

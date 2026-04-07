@@ -1,3 +1,0 @@
-﻿Ceci est un fichier de test
-Contenant du texte simple
-Pour tester l'upload de fichiers
