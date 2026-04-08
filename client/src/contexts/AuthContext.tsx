@@ -41,23 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (credentials: any) => {
-    // Call backend authentication endpoint
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-          setIsAuthenticated(true);
-          setUser(data.user);
-        }
-      });
+  const login = (data: any) => {
+    // Update auth state with already authenticated data from LoginModal
+    if (data.token) {
+      localStorage.setItem('authToken', data.token);
+      setIsAuthenticated(true);
+      setUser(data.user);
+    }
   };
 
   const logout = () => {

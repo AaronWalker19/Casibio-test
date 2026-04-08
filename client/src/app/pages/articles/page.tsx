@@ -2,49 +2,96 @@ import { useState, useEffect } from "react";
 import { Navigation } from "../../components/Navigation.tsx";
 import { Footer } from "../../components/Footer.tsx";
 import { ArticleCard } from "../../components/ArticleCard.tsx";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback.tsx";
+import { useLanguage } from "../../../contexts/LanguageContext.tsx";
 
 interface Article {
   id: number;
   title_fr: string;
-  date: string;
+  title_en: string;
+  created_at: string;
   status: string;
-  image: string;
+  summary_fr: string | null;
+  summary_en: string | null;
+  methods_fr: string | null;
+  methods_en: string | null;
+  results_fr: string | null;
+  results_en: string | null;
+  perspectives_fr: string | null;
+  perspectives_en: string | null;
   code_anr?: string;
 }
 
+// Fonction pour calculer le statut basé sur la complétude des champs
+const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
+  const importantFields = language === 'FR' ? [
+    article.summary_fr,
+    article.methods_fr,
+    article.results_fr,
+    article.perspectives_fr,
+  ] : [
+    article.summary_en,
+    article.methods_en,
+    article.results_en,
+    article.perspectives_en,
+  ];
+  
+  const hasEmptyField = importantFields.some(field => !field || field.trim() === "");
+  return hasEmptyField ? (language === 'FR' ? "En cours" : "In progress") : (language === 'FR' ? "Complet" : "Complete");
+};
+
 export default function ArticlesPage() {
+  const { language } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"date-asc" | "date-desc">("date-desc");
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
     const fetchArticles = async () => {
       try {
         const response = await fetch("/api/projects");
         if (!response.ok) {
-          throw new Error("Erreur lors du chargement des articles");
+          throw new Error(language === 'FR' ? "Erreur lors du chargement des articles" : "Error loading articles");
         }
         const data = await response.json();
-        setArticles(data);
+        
+        // Enrichir les articles avec le statut calculé
+        const enrichedArticles = data.map((article: Article) => ({
+          ...article,
+          status: calculateStatus(article, language),
+        }));
+        
+        setArticles(enrichedArticles);
         setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur inconnue");
+        setError(err instanceof Error ? err.message : (language === 'FR' ? "Erreur inconnue" : "Unknown error"));
         setLoading(false);
       }
     };
 
     fetchArticles();
-  }, []);
+  }, [language]);
+
+  // Trier les articles
+  const sortedArticles = [...articles].sort((a, b) => {
+    if (sortBy === "date-asc") {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    if (sortBy === "date-desc") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    return 0;
+  });
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
       <div className="bg-[#183542] content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
         <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-[#ff404a] w-full">
-          Articles
+          {language === 'FR' ? 'Articles' : 'Articles'}
         </p>
         <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-white w-full">
-          Voici tout nos articles
+          {language === 'FR' ? 'Voici tout nos articles' : 'Here are all our articles'}
         </p>
       </div>
       <div className="relative shrink-0 w-full">
@@ -52,33 +99,56 @@ export default function ArticlesPage() {
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full">
             <div className="content-stretch flex items-center justify-end gap-[20px] relative shrink-0 w-full">
-              <button className="content-stretch flex gap-[10px] items-center p-[5px] relative rounded-[4px] shrink-0">
-                <div aria-hidden="true" className="absolute border border-black border-solid inset-0 pointer-events-none rounded-[4px]" />
-                <div className="relative shrink-0 size-[32px]" data-name="material-symbols:search-rounded">
-                  <div className="absolute inset-[12.5%_14.27%_14.27%_12.5%]" data-name="Vector">
-                    <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 23.4526 23.4526">
-                      <path d="M19.6914 20.9531L13.168 14.4297C12.6758 14.8438 12.1152 15.168 11.4863 15.4023C10.8574 15.6367 10.1895 15.7539 9.48242 15.7539C7.72852 15.7539 6.22852 15.1582 5.04102 13.9668C3.84375 12.7852 3.24023 11.2852 3.24023 9.53125C3.24023 7.77734 3.8418 6.27734 5.04102 5.08594C6.23047 3.88477 7.73047 3.28516 9.48242 3.28516C11.2441 3.28516 12.7441 3.88477 13.9355 5.08594C15.1367 6.27734 15.7363 7.77734 15.7363 9.53125C15.7363 10.2383 15.6191 10.9062 15.3848 11.5352C15.1504 12.1641 14.8262 12.7305 14.4121 13.2227L20.9551 19.7656L19.6914 20.9531ZM9.48242 14.0039C10.7461 14.0039 11.8184 13.5527 12.6895 12.6621C13.5703 11.7617 14.0156 10.6895 14.0156 9.42578C14.0156 8.16211 13.5703 7.08984 12.6895 6.19922C11.8184 5.29883 10.7461 4.84766 9.48242 4.84766C8.20898 4.84766 7.13086 5.29883 6.25977 6.19922C5.37891 7.08984 4.93359 8.16211 4.93359 9.42578C4.93359 10.6895 5.37891 11.7617 6.25977 12.6621C7.13086 13.5527 8.20898 14.0039 9.48242 14.0039Z" fill="black" id="Vector" />
+              {/* Bouton Filtre avec menu déroulant */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  className="flex gap-[10px] items-center p-[10px] relative rounded-[4px] shrink-0 h-[40px] border border-black"
+                >
+                  <div className="relative shrink-0 size-[20px]" data-name="mi:filter">
+                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
+                      <path d="M4 8H28V10.6667H4V8ZM8 14.6667H24V17.3333H8V14.6667ZM12 21.3333H20V24H12V21.3333Z" fill="black" />
                     </svg>
                   </div>
-                </div>
-              </button>
-              <button className="content-stretch flex gap-[10px] items-center p-[5px] relative rounded-[4px] shrink-0">
-                <div aria-hidden="true" className="absolute border border-black border-solid inset-0 pointer-events-none rounded-[4px]" />
-                <div className="relative shrink-0 size-[32px]" data-name="mi:filter">
-                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
-                    <path d="M4 8H28V10.6667H4V8ZM8 14.6667H24V17.3333H8V14.6667ZM12 21.3333H20V24H12V21.3333Z" fill="black" />
-                  </svg>
-                </div>
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black whitespace-nowrap">
-                  Filtre
-                </p>
-              </button>
+                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-black whitespace-nowrap">
+                    {language === 'FR' ? (sortBy === "date-asc" ? "Date (Plus ancien)" : "Date (Plus récent)") : (sortBy === "date-asc" ? "Date (Oldest)" : "Date (Newest)")}
+                  </p>
+                </button>
+
+                {/* Menu déroulant */}
+                {showSortMenu && (
+                  <div className="absolute right-0 mt-[5px] bg-white border border-black rounded-[4px] z-10 shadow-lg">
+                    <button
+                      onClick={() => {
+                        setSortBy("date-asc");
+                        setShowSortMenu(false);
+                      }}
+                      className={`block w-full text-left px-[20px] py-[10px] hover:bg-gray-100 ${
+                        sortBy === "date-asc" ? "bg-[#ff404a] text-white" : ""
+                      }`}
+                    >
+                      {language === 'FR' ? "Date (Plus ancien)" : "Date (Oldest)"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortBy("date-desc");
+                        setShowSortMenu(false);
+                      }}
+                      className={`block w-full text-left px-[20px] py-[10px] hover:bg-gray-100 ${
+                        sortBy === "date-desc" ? "bg-[#ff404a] text-white" : ""
+                      }`}
+                    >
+                      {language === 'FR' ? "Date (Plus récent)" : "Date (Newest)"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-[40px] w-full">
               {loading && (
                 <div className="col-span-3 text-center py-[50px]">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
-                    Chargement des articles...
+                    {language === 'FR' ? 'Chargement des articles...' : 'Loading articles...'}
                   </p>
                 </div>
               )}
@@ -92,21 +162,25 @@ export default function ArticlesPage() {
               {!loading && !error && articles.length === 0 && (
                 <div className="col-span-3 text-center py-[50px]">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
-                    Aucun article trouvé
+                    {language === 'FR' ? 'Aucun article trouvé' : 'No articles found'}
                   </p>
                 </div>
               )}
               {!loading &&
                 !error &&
-                articles.map((article) => (
+                sortedArticles.map((article) => (
                   <ArticleCard
                     key={article.id}
                     id={article.id}
-                    title={article.title_fr}
-                    date={article.date}
-                    status={article.status}
-                    description={article.title_fr}
-                    image={article.image}
+                    title={language === 'FR' ? article.title_fr : article.title_en}
+                    date={new Date(article.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                    status={calculateStatus(article, language)}
+                    description={language === 'FR' ? article.title_fr : article.title_en}
+                    image="https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"
                   />
                 ))}
             </div>

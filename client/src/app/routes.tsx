@@ -2,11 +2,11 @@ import { createBrowserRouter } from "react-router";
 import HomePage from "./pages/HomePage.tsx";
 import HistoirePage from "./pages/HistoirePage.tsx";
 import ArticlesPage from "./pages/articles/page.tsx";
+import ArticlePage from "./pages/articles/[id].tsx";
 import MemberArticlesPage from "./pages/MemberArticlesPage.tsx";
 import FormulairePage from "./pages/FormulairePage.tsx";
 import GalleriePage from "./pages/GalleriePage.tsx";
 import BackMemberPage from "./pages/BackMemberPage.tsx";
-import BackArticlesPage from "./pages/BackArticlesPage.tsx";
 import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
 
 export const router = createBrowserRouter([
@@ -23,6 +23,10 @@ export const router = createBrowserRouter([
     Component: ArticlesPage,
   },
   {
+    path: "/articles/:id",
+    Component: ArticlePage,
+  },
+  {
     path: "/gallerie",
     Component: GalleriePage,
   },
@@ -36,7 +40,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/backoffice/articles",
-    Component: () => <ProtectedRoute><BackArticlesPage /></ProtectedRoute>,
+    Component: () => <ProtectedRoute><MemberArticlesPage /></ProtectedRoute>,
   },
   {
     path: "/backoffice/membres",

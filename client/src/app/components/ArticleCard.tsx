@@ -27,7 +27,9 @@ export function ArticleCard({ id, title, date, status, description, image }: Art
               date: {date}
             </p>
           </div>
-          <div className="bg-[#137300] content-stretch flex items-center justify-center p-[5px] relative rounded-[4px] shrink-0">
+          <div className={`content-stretch flex items-center justify-center p-[5px] relative rounded-[4px] shrink-0 ${
+            status === "Complet" ? "bg-[#137300]" : "bg-[#ff9500]"
+          }`}>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
               {status}
             </p>

@@ -3,15 +3,25 @@ import { Link } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { ArticleCard } from "../components/ArticleCard.tsx";
+import { useLanguage } from "../../contexts/LanguageContext.tsx";
+import { t } from "../../contexts/translations.tsx";
 import svgPaths from "../../imports/Home/svg-1u6sm0pn16.ts";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
 
 interface Article {
   id: number;
   title_fr: string;
-  date: string;
+  title_en: string;
+  created_at: string;
   status: string;
-  image: string;
+  summary_fr: string | null;
+  summary_en: string | null;
+  methods_fr: string | null;
+  methods_en: string | null;
+  results_fr: string | null;
+  results_en: string | null;
+  perspectives_fr: string | null;
+  perspectives_en: string | null;
   code_anr?: string;
 }
 
@@ -23,6 +33,24 @@ interface GalleryImage {
   file_type: string;
   created_at: string;
 }
+
+// Fonction pour calculer le statut basé sur la complétude des champs
+const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
+  const importantFields = language === 'FR' ? [
+    article.summary_fr,
+    article.methods_fr,
+    article.results_fr,
+    article.perspectives_fr,
+  ] : [
+    article.summary_en,
+    article.methods_en,
+    article.results_en,
+    article.perspectives_en,
+  ];
+  
+  const hasEmptyField = importantFields.some(field => !field || field.trim() === "");
+  return hasEmptyField ? t(language, "inCours") : t(language, "complet");
+};
 
 function Frame4() {
   return (
@@ -58,6 +86,7 @@ function Group1() {
 }
 
 export default function HomePage() {
+  const { language } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [errorArticles, setErrorArticles] = useState<string | null>(null);
@@ -71,28 +100,35 @@ export default function HomePage() {
       try {
         const response = await fetch("/api/projects");
         if (!response.ok) {
-          throw new Error("Erreur lors du chargement des articles");
+          throw new Error(t(language, "erreurChargementArticles"));
         }
         const data = await response.json();
-        // Prendre les 3 derniers articles
-        const recentArticles = data.slice(0, 3);
-        setArticles(recentArticles);
+        
+        // Enrichir les articles avec le statut calculé et prendre les 3 derniers
+        const enrichedArticles = data
+          .slice(0, 3)
+          .map((article: Article) => ({
+            ...article,
+            status: calculateStatus(article, language),
+          }));
+        
+        setArticles(enrichedArticles);
         setLoadingArticles(false);
       } catch (err) {
-        setErrorArticles(err instanceof Error ? err.message : "Erreur inconnue");
+        setErrorArticles(err instanceof Error ? err.message : t(language, "erreurInconnue"));
         setLoadingArticles(false);
       }
     };
 
     fetchArticles();
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     const fetchGalleryImages = async () => {
       try {
-        const response = await fetch("/api/project_files");
+        const response = await fetch("/api/projects/files/all");
         if (!response.ok) {
-          throw new Error("Erreur lors du chargement des images");
+          throw new Error(t(language, "erreurChargementImages"));
         }
         const data = await response.json();
         // Prendre les 3 premières images
@@ -100,13 +136,13 @@ export default function HomePage() {
         setGalleryImagesFetched(recentImages);
         setLoadingGallery(false);
       } catch (err) {
-        setErrorGallery(err instanceof Error ? err.message : "Erreur inconnue");
+        setErrorGallery(err instanceof Error ? err.message : t(language, "erreurInconnue"));
         setLoadingGallery(false);
       }
     };
 
     fetchGalleryImages();
-  }, []);
+  }, [language]);
   return (
     <div className="bg-white  flex flex-col items-center relative size-full" data-name="home">
       <Navigation />
@@ -114,10 +150,10 @@ export default function HomePage() {
         <div className=" flex flex-col gap-[10px] items-center relative shrink-0">
           <Frame4 />
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-[#ff404a] whitespace-nowrap">
-            Projet ANR Casibio
+            {t(language, "projetANRCasibio")}
           </p>
           <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic opacity-70 relative shrink-0 text-[14px] text-center text-white w-[901px]">
-            vise à élaborer des céramiques poreuses catalytiques Ni(Ru)/SiCxOy pour les réactions de reformage à sec du méthane et de méthanation du CO2, deux réactions incontournables dans le domaine de l'énergie pour lesquels la stabilité du catalyseur est la principale problématique
+            {t(language, "projectDescription")}
           </p>
         </div>
         <div className=" flex gap-[20px] items-start justify-center relative shrink-0">
@@ -130,7 +166,7 @@ export default function HomePage() {
               <Group1 />
             </div>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[25.938px] text-white whitespace-nowrap">
-              Articles
+              {t(language, "articles")}
             </p>
             <div className="h-[31.156px] relative shrink-0 w-[15.578px]" data-name="weui:arrow-filled">
               <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">
@@ -146,7 +182,7 @@ export default function HomePage() {
             data-name="Component 10"
           >
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[#183542] text-[25.938px] whitespace-nowrap">
-              En savoir plus
+              {t(language, "enSavoirPlus")}
             </p>
             <div className="h-[31.156px] relative shrink-0 w-[15.578px]" data-name="weui:arrow-filled">
               <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">
@@ -164,15 +200,15 @@ export default function HomePage() {
           <div className=" flex flex-col gap-[50px] items-center p-[50px] relative w-full">
             <div className=" flex flex-col gap-[28px] items-start relative shrink-0 w-full">
               <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[48px] text-black w-full">
-                Dernières publication
+                {t(language, "dernieresPublications")}
               </p>
               <div className=" flex items-center justify-between relative shrink-0 w-full">
                 <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
-                  Découvrez nos travaux et avancements recents
+                  {t(language, "decouvrezNosTravaux")}
                 </p>
                 <Link to="/articles" className=" flex gap-[10px] items-center relative shrink-0">
                   <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
-                    Voir tout
+                    {t(language, "voirTout")}
                   </p>
                   <div className="relative shrink-0 size-[30px]" data-name="maki:arrow">
                     <div className="absolute inset-[13.33%_3.33%_13.42%_3.33%]" data-name="Vector">
@@ -187,26 +223,30 @@ export default function HomePage() {
             <div className=" flex gap-[80px] items-center justify-center relative shrink-0 w-full">
               {loadingArticles ? (
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                  Chargement des articles...
+                  {t(language, "chargementArticles")}
                 </p>
               ) : errorArticles ? (
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-red-500">
-                  Erreur lors du chargement des articles
+                  {errorArticles}
                 </p>
               ) : articles.length === 0 ? (
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                  Aucun article trouvé
+                  {t(language, "aucunArticleTrouve")}
                 </p>
               ) : (
                 articles.map((article) => (
                   <ArticleCard
                     key={article.id}
                     id={article.id}
-                    title={article.title_fr}
-                    date={article.date}
-                    status={article.status}
-                    description={article.title_fr}
-                    image={article.image}
+                    title={language === 'FR' ? article.title_fr : article.title_en}
+                    date={new Date(article.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                    status={calculateStatus(article, language)}
+                    description={language === 'FR' ? article.title_fr : article.title_en}
+                    image="https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"
                   />
                 ))
               )}
@@ -237,7 +277,7 @@ export default function HomePage() {
             data-name="Component 10"
           >
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[#183542] text-[35.99px] whitespace-nowrap">
-              En savoir plus
+              {t(language, "enSavoirPlus")}
             </p>
             <div className="h-[43.232px] relative shrink-0 w-[21.616px]" data-name="weui:arrow-filled">
               <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">

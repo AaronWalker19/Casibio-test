@@ -6,7 +6,6 @@ import MemberArticlesPage from "./pages/MemberArticlesPage";
 import FormulairePage from "./pages/FormulairePage";
 import GalleriePage from "./pages/GalleriePage";
 import BackMemberPage from "./pages/BackMemberPage";
-import BackArticlesPage from "./pages/BackArticlesPage";
 
 export const router = createBrowserRouter([
   {
@@ -35,7 +34,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/backoffice/articles",
-    Component: BackArticlesPage,
+    Component: MemberArticlesPage,
   },
   {
     path: "/backoffice/membres",

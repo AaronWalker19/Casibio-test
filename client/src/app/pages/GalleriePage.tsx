@@ -26,7 +26,7 @@ export default function GalleriePage() {
   useEffect(() => {
     const fetchGalleryFiles = async () => {
       try {
-        const response = await fetch("/api/project_files");
+        const response = await fetch("/api/projects/files/all");
         if (!response.ok) {
           throw new Error("Erreur lors du chargement des fichiers");
         }

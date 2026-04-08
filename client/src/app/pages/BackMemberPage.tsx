@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
+import { Link } from "react-router";
 
 interface User {
   id: number;
@@ -52,9 +53,9 @@ export default function BackMemberPage() {
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
             <div className="content-stretch flex gap-[40px] items-start relative shrink-0 w-full">
-              <button className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[48px] text-black whitespace-nowrap">
+              <Link to="/backoffice/articles" className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[48px] text-black whitespace-nowrap">
                 Articles
-              </button>
+              </Link>
               <button className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
                 Membres
               </button>

@@ -5,20 +5,42 @@ const path = require("path");
 const fs = require("fs");
 let db;
 
+// Fonction pour transformer un chemin de fichier en URL
+const getFileUrl = (filePath) => {
+  // Si c'est déjà une URL, la retourner
+  if (filePath && (filePath.startsWith('http://') || filePath.startsWith('https://'))) {
+    return filePath;
+  }
+  // Si c'est un chemin du système, extraire juste le nom du fichier
+  if (filePath) {
+    const fileName = path.basename(filePath);
+    return `/uploads/${fileName}`;
+  }
+  return null;
+};
+
 try {
   db = require("../db/database");
   console.log("✅ DB chargée");
 } catch (err) {
   console.error("❌ DB FAILED:", err.message);
+  db = null; // Explicitement à null
 }
 
-if (!db) {
-  router.get("/", (req, res) => {
-    return res.json([]);
-  });
+// Middleware pour vérifier la disponibilité de la DB
+const requireDB = (req, res, next) => {
+  if (!db) {
+    return res.status(503).json({ 
+      error: "Service indisponible",
+      message: "Base de données non initialisée. Vérifiez les logs du serveur."
+    });
+  }
+  next();
+};
 
-  module.exports = router;
-  return;
+// Si la DB n'est pas disponible, enregistrer les routes avec le middleware requireDB
+if (!db) {
+  console.warn("⚠️  Database not initialized - routes will require it");
 }
 
 
@@ -51,7 +73,7 @@ router.use((req, res, next) => {
 });
 
 // CREATE - POST /api/projects
-router.post("/", authenticateToken, upload.array("files"), async (req, res) => {
+router.post("/", requireDB, authenticateToken, upload.array("files"), async (req, res) => {
   const {
     code_anr,
     title_fr,
@@ -85,7 +107,8 @@ router.post("/", authenticateToken, upload.array("files"), async (req, res) => {
         fs.writeFileSync(uploadPath, file.buffer);
         
         const fileStmt = db.prepare(fileSql);
-        await fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+        // Stocker seulement le nom du fichier, pas le chemin complet
+        await fileStmt.run(projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
         console.log(`Fichier sauvegardé: ${uploadPath}`);
       }
     }
@@ -98,7 +121,7 @@ router.post("/", authenticateToken, upload.array("files"), async (req, res) => {
 });
 
 // UPLOAD FILES TO EXISTING PROJECT - POST /api/projects/:projectId/upload
-router.post("/:projectId/upload", authenticateToken, upload.array("files"), async (req, res) => {
+router.post("/:projectId/upload", requireDB, authenticateToken, upload.array("files"), async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "Aucun fichier fourni" });
   }
@@ -126,7 +149,8 @@ router.post("/:projectId/upload", authenticateToken, upload.array("files"), asyn
       fs.writeFileSync(uploadPath, file.buffer);
       
       const fileStmt = db.prepare(fileSql);
-      await fileStmt.run(projectId, uploadPath, uniqueFileName, file.originalname, file.mimetype);
+      // Stocker seulement le nom du fichier, pas le chemin complet
+      await fileStmt.run(projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
       console.log(`Fichier sauvegardé: ${uploadPath}`);
     }
 
@@ -137,8 +161,25 @@ router.post("/:projectId/upload", authenticateToken, upload.array("files"), asyn
   }
 });
 
+// GET ALL PROJECT FILES - GET /api/projects/files/all (DOIT VENIR AVANT /:projectId)
+router.get("/files/all", requireDB, async (req, res) => {
+  try {
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at, project_id FROM project_files ORDER BY created_at DESC");
+    const rows = await stmt.all();
+    // Transformer les chemins en URLs
+    const filesWithUrls = rows.map(row => ({
+      ...row,
+      file_path: getFileUrl(row.file_path)
+    }));
+    res.json(filesWithUrls);
+  } catch (err) {
+    console.error("Get all files error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // GET ALL - GET /api/projects
-router.get("/", async (req, res) => {
+router.get("/", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects ORDER BY created_at DESC");
     const rows = await stmt.all();
@@ -150,7 +191,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET ONE - GET /api/projects/:projectId
-router.get("/:projectId", async (req, res) => {
+router.get("/:projectId", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
     const row = await stmt.get(req.params.projectId);
@@ -162,11 +203,16 @@ router.get("/:projectId", async (req, res) => {
 });
 
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
-router.get("/:projectId/files", async (req, res) => {
+router.get("/:projectId/files", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
-    res.json(rows);
+    // Transformer les chemins en URLs
+    const filesWithUrls = rows.map(row => ({
+      ...row,
+      file_path: getFileUrl(row.file_path)
+    }));
+    res.json(filesWithUrls);
   } catch (err) {
     console.error("Get files error:", err);
     return res.status(500).json({ error: err.message });
@@ -174,7 +220,7 @@ router.get("/:projectId/files", async (req, res) => {
 });
 
 // DOWNLOAD FILE - GET /api/projects/:projectId/file/:fileId/download
-router.get("/:projectId/file/:fileId/download", async (req, res) => {
+router.get("/:projectId/file/:fileId/download", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
     const row = await stmt.get(req.params.fileId, req.params.projectId);
@@ -183,9 +229,12 @@ router.get("/:projectId/file/:fileId/download", async (req, res) => {
       return res.status(404).json({ error: "Fichier non trouvé" });
     }
 
+    // Reconstruire le chemin complet du fichier
+    const fullFilePath = path.join(uploadsDir, row.file_path);
+    
     res.setHeader("Content-Type", row.file_type);
     res.setHeader("Content-Disposition", `attachment; filename="${row.file_name}"`);
-    res.download(row.file_path, row.file_name);
+    res.download(fullFilePath, row.file_name);
   } catch (err) {
     console.error("Download file error:", err);
     return res.status(500).json({ error: err.message });
@@ -193,7 +242,7 @@ router.get("/:projectId/file/:fileId/download", async (req, res) => {
 });
 
 // VIEW FILE - GET /api/projects/:projectId/file/:fileId/view
-router.get("/:projectId/file/:fileId/view", async (req, res) => {
+router.get("/:projectId/file/:fileId/view", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
     const row = await stmt.get(req.params.fileId, req.params.projectId);
@@ -202,9 +251,12 @@ router.get("/:projectId/file/:fileId/view", async (req, res) => {
       return res.status(404).json({ error: "Fichier non trouvé" });
     }
 
+    // Reconstruire le chemin complet du fichier
+    const fullFilePath = path.join(uploadsDir, row.file_path);
+
     res.setHeader("Content-Type", row.file_type);
     res.setHeader("Cache-Control", "public, max-age=3600");
-    res.sendFile(row.file_path);
+    res.sendFile(fullFilePath);
   } catch (err) {
     console.error("View file error:", err);
     return res.status(500).json({ error: err.message });
@@ -212,7 +264,7 @@ router.get("/:projectId/file/:fileId/view", async (req, res) => {
 });
 
 // RENAME FILE - PUT /api/projects/:projectId/file/:fileId/rename
-router.put("/:projectId/file/:fileId/rename", authenticateToken, async (req, res) => {
+router.put("/:projectId/file/:fileId/rename", requireDB, authenticateToken, async (req, res) => {
   const { new_name } = req.body;
 
   if (!new_name) {
@@ -230,7 +282,7 @@ router.put("/:projectId/file/:fileId/rename", authenticateToken, async (req, res
 });
 
 // DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
-router.delete("/:projectId/file/:fileId", authenticateToken, async (req, res) => {
+router.delete("/:projectId/file/:fileId", requireDB, authenticateToken, async (req, res) => {
   try {
     // Récupérer le chemin du fichier avant suppression
     const getStmt = db.prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
@@ -241,12 +293,15 @@ router.delete("/:projectId/file/:fileId", authenticateToken, async (req, res) =>
     await delStmt.run(req.params.fileId, req.params.projectId);
 
     // Supprimer le fichier du disque s'il existe
-    if (row && row.file_path && fs.existsSync(row.file_path)) {
-      try {
-        fs.unlinkSync(row.file_path);
-        console.log(`Fichier supprimé du disque: ${row.file_path}`);
-      } catch (fsErr) {
-        console.error("Erreur suppression fichier disque:", fsErr);
+    if (row && row.file_path) {
+      const fullFilePath = path.join(uploadsDir, row.file_path);
+      if (fs.existsSync(fullFilePath)) {
+        try {
+          fs.unlinkSync(fullFilePath);
+          console.log(`Fichier supprimé du disque: ${fullFilePath}`);
+        } catch (fsErr) {
+          console.error("Erreur suppression fichier disque:", fsErr);
+        }
       }
     }
 
@@ -258,7 +313,7 @@ router.delete("/:projectId/file/:fileId", authenticateToken, async (req, res) =>
 });
 
 // UPDATE PROJECT - PUT /api/projects/:projectId
-router.put("/:projectId", authenticateToken, async (req, res) => {
+router.put("/:projectId", requireDB, authenticateToken, async (req, res) => {
   const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
   
   try {
@@ -278,7 +333,7 @@ router.put("/:projectId", authenticateToken, async (req, res) => {
 });
 
 // DELETE PROJECT - DELETE /api/projects/:projectId
-router.delete("/:projectId", authenticateToken, async (req, res) => {
+router.delete("/:projectId", requireDB, authenticateToken, async (req, res) => {
   try {
     // Récupérer tous les fichiers du projet
     const getFilesStmt = db.prepare("SELECT file_path FROM project_files WHERE project_id = ?");

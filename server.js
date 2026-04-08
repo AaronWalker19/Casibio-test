@@ -42,6 +42,9 @@ try {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+// ===== SERVE UPLOADS FOLDER =====
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // ===== ROUTES API =====
 try {
   const authRoutes = require("./routes/auth");
@@ -56,15 +59,149 @@ try {
 }
 
 // ===== HEALTH CHECK =====
-app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "OK",
-    database: "MySQL",
-    config: {
-      host: mysqlConfig.host,
-      database: mysqlConfig.database
+app.get("/api/health", async (req, res) => {
+  try {
+    const dbPool = db && db.pool ? db.pool() : null;
+    
+    let dbStatus = "❌ Not initialized";
+    let dbInfo = {};
+    let dbError = null;
+    
+    if (dbPool) {
+      try {
+        const connection = await dbPool.getConnection();
+        await connection.ping();
+        
+        // Vérifier les tables
+        const [tables] = await connection.execute(`
+          SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
+          WHERE TABLE_SCHEMA = ?
+        `, [mysqlConfig.database]);
+        
+        connection.release();
+        dbStatus = "✓ Connected";
+        dbInfo = {
+          host: mysqlConfig.host,
+          database: mysqlConfig.database,
+          port: mysqlConfig.port,
+          tables: tables.map(t => t.TABLE_NAME)
+        };
+      } catch (err) {
+        dbStatus = `❌ Connection failed: ${err.message}`;
+        dbError = err.message;
+      }
     }
-  });
+    
+    res.json({ 
+      status: "OK",
+      database: dbStatus,
+      error: dbError,
+      config: dbInfo,
+      env: {
+        PORT: process.env.PORT || 'not set',
+        DB_HOST: process.env.DB_HOST || 'not set',
+        DB_NAME: process.env.DB_NAME || 'not set'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: "ERROR",
+      error: err.message 
+    });
+  }
+});
+
+// ===== ADMIN INIT - Créer les tables manuellement =====
+app.post("/api/admin/init-db", async (req, res) => {
+  try {
+    if (!db || !db.pool) {
+      return res.status(503).json({ 
+        error: "Base de données non disponible"
+      });
+    }
+    
+    const connection = await db.pool().getConnection();
+    
+    try {
+      // Création des tables
+      const sqls = [
+        // Table users
+        `CREATE TABLE IF NOT EXISTS users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(100) UNIQUE NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          role ENUM('admin', 'member') DEFAULT 'member',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_username (username),
+          INDEX idx_email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        
+        // Table projects
+        `CREATE TABLE IF NOT EXISTS projects (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          code_anr VARCHAR(100),
+          title_fr VARCHAR(255),
+          title_en VARCHAR(255),
+          summary_fr TEXT,
+          summary_en TEXT,
+          methods_fr TEXT,
+          methods_en TEXT,
+          results_fr TEXT,
+          results_en TEXT,
+          perspectives_fr TEXT,
+          perspectives_en TEXT,
+          created_by INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+          INDEX idx_code_anr (code_anr),
+          INDEX idx_created_by (created_by),
+          INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        
+        // Table project_files
+        `CREATE TABLE IF NOT EXISTS project_files (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          project_id INT NOT NULL,
+          file_path VARCHAR(500),
+          file_name VARCHAR(255),
+          file_display_name VARCHAR(255),
+          file_type VARCHAR(100),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          INDEX idx_project_id (project_id),
+          INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        
+        // Créer l'admin par défaut s'il n'existe pas
+        `INSERT IGNORE INTO users (username, email, password_hash, role)
+         SELECT 'admin', 'admin@test.com', '$2a$10$8Y9.h8aMW9JqCdS.H8v5CON5HhTqGVBhGME8rI/7E.JZBjG7k7z3e', 'admin'
+         WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin')`
+      ];
+      
+      for (const sql of sqls) {
+        await connection.execute(sql);
+      }
+      
+      connection.release();
+      
+      res.json({
+        success: true,
+        message: "Base de données initialisée avec succès",
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      connection.release();
+      throw err;
+    }
+  } catch (err) {
+    console.error("DB Init error:", err);
+    res.status(500).json({
+      error: "Erreur lors de l'initialisation",
+      message: err.message
+    });
+  }
 });
 
 // ===== SERVE FRONTEND =====
