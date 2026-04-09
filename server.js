@@ -1,11 +1,15 @@
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
-require("dotenv").config(); // Charger les variables d'environnement
+const helmet = require("helmet");
+require("dotenv").config();
 
 const app = express();
 
 console.log("🚀 SERVER START - MYSQL VERSION");
+
+// ===== SÉCURITÉ: Headers de sécurité =====
+app.use(helmet()); // Ajoute les headers de sécurité (HSTS, X-Frame-Options, etc.)
 
 // ===== CONFIGURATION MYSQL =====
 const mysqlConfig = {
@@ -22,10 +26,25 @@ console.log(`   User: ${mysqlConfig.user}`);
 console.log(`   Database: ${mysqlConfig.database}`);
 console.log(`   💡 Gérer via phpMyAdmin: http://localhost/phpmyadmin\n`);
 
-// ===== CORS =====
+// ===== SÉCURITÉ: CORS restrictif =====
+const allowedOrigins = [
+  process.env.CORS_ORIGIN || 'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-  origin: true,
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS non autorisé'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // ===== SAFE IMPORTS =====
@@ -41,6 +60,10 @@ try {
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// SÉCURITÉ: Rate limiting global
+const { apiLimiter } = require("./middleware/security");
+app.use("/api/", apiLimiter);
 
 // ===== SERVE UPLOADS FOLDER =====
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

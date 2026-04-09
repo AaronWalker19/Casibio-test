@@ -8,6 +8,11 @@ import { GalleryLightbox } from "../../components/GalleryLightbox.tsx";
 import { useLanguage } from "../../../contexts/LanguageContext.tsx";
 import { t } from "../../../contexts/translations.tsx";
 
+// Ensure Tailwind CSS variables are available
+if (typeof document !== "undefined" && !document.documentElement.style.getPropertyValue('--color-primary')) {
+  document.documentElement.style.setProperty('--color-primary', '#183542');
+}
+
 interface Article {
   id: number;
   code_anr: string;
@@ -166,9 +171,9 @@ export default function ArticlePage() {
       <Navigation />
       
       {/* Header */}
-      <div className="bg-[#183542] content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
+      <div className="bg-primary content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
         <div className="flex gap-[15px] items-center">
-          <div className="bg-[#ff404a] px-[12px] py-[6px] rounded-[4px]">
+          <div className="bg-error-accent px-[12px] py-[6px] rounded-[4px]">
             <p className="font-['Inter:Bold',sans-serif] font-bold text-[14px] text-white">
               {article.code_anr}
             </p>
@@ -197,7 +202,7 @@ export default function ArticlePage() {
       </div>
 
       {/* Image et infos */}
-      <div className="bg-white content-stretch flex flex-col items-center gap-[20px] px-[50px] py-[30px] relative shrink-0 w-full border-b border-[#f3f3f5]">
+      <div className="bg-white content-stretch flex flex-col items-center gap-[20px] px-[50px] py-[30px] relative shrink-0 w-full border-b border-gray-50">
         <div className="h-[300px] w-full rounded-[4px] overflow-hidden">
           <ImageWithFallback 
             src={projectFiles.length > 0 && projectFiles[0].file_path ? projectFiles[0].file_path : "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"} 
@@ -207,7 +212,7 @@ export default function ArticlePage() {
         </div>
         <div className="flex gap-[20px] items-start w-full">
           <div className="flex gap-[10px] items-center">
-            <div className="bg-[#c9232c] content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0">
+            <div className="bg-error content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0">
               <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
                 {new Date(article.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US', {
                   year: 'numeric',
@@ -217,7 +222,7 @@ export default function ArticlePage() {
               </p>
             </div>
             <div className={`content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 ${
-              article.status === t(language, "complet") ? "bg-[#137300]" : "bg-[#ff9500]"
+              article.status === t(language, "complet") ? "bg-success" : "bg-warning"
             }`}>
               <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
                 {article.status}
@@ -229,7 +234,7 @@ export default function ArticlePage() {
 
       {/* Contenu */}
       <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-[#f3f3f5] border-b border-solid inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="absolute border-gray-50 border-b border-solid inset-0 pointer-events-none" />
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex gap-[50px] items-start p-[50px] relative w-full">
             {/* Contenu principal */}
@@ -253,7 +258,7 @@ export default function ArticlePage() {
             {/* Sidebar */}
             <div className="content-stretch flex flex-col gap-[20px] items-start relative shrink-0 w-[400px] sticky top-[50px]">
               {/* Sommaire */}
-              <div className="bg-[#f3f3f5] content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full ">
+              <div className="bg-gray-50 content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full ">
                 <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[24px] text-black w-full">
                   {t(language, "sommaire")}
                 </p>
@@ -268,7 +273,7 @@ export default function ArticlePage() {
                       }}
                       className={`font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] w-full text-left p-[8px] rounded-[4px] transition-colors ${
                         activeSection === section.id
-                          ? "bg-[#ff404a] text-white"
+                          ? "bg-error-accent text-white"
                           : "text-black hover:bg-gray-200"
                       }`}
                     >
@@ -279,7 +284,7 @@ export default function ArticlePage() {
               </div>
 
               {/* Galerie d'images */}
-              <div className="bg-[#f3f3f5] content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full">
+              <div className="bg-gray-50 content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full">
                 <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[24px] text-black w-full">
                   {t(language, "galerie")}
                 </p>
@@ -303,7 +308,7 @@ export default function ArticlePage() {
                   {projectFiles.length > 8 && !showFullGallery && (
                     <button
                       onClick={() => setShowFullGallery(true)}
-                      className="aspect-square rounded-[4px] bg-[#183542] flex items-center justify-center hover:bg-[#0f1f27] transition-colors"
+                      className="aspect-square rounded-[4px] bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
                     >
                       <span className="text-white text-[32px] font-bold">+</span>
                     </button>
@@ -337,7 +342,7 @@ export default function ArticlePage() {
 
       {/* Fichiers téléchargeables */}
       {projectFiles.filter(f => f.file_type?.toLowerCase().includes('pdf') || f.file_type?.toLowerCase().includes('doc')).length > 0 && (
-        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-[#f3f3f5]">
+        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-gray-50">
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[40px] text-black w-full">
             {t(language, "fichierLie")}
           </p>
@@ -347,9 +352,9 @@ export default function ArticlePage() {
                 key={file.id}
                 href={file.file_path}
                 download
-                className="bg-[#f3f3f5] content-stretch flex gap-[15px] items-center p-[20px] relative rounded-[4px] shrink-0 hover:bg-gray-300 transition-colors"
+                className="bg-gray-50 content-stretch flex gap-[15px] items-center p-[20px] relative rounded-[4px] shrink-0 hover:bg-gray-300 transition-colors"
               >
-                <div className="relative shrink-0 size-[60px] bg-[#183542] rounded-[4px] flex items-center justify-center">
+                <div className="relative shrink-0 size-[60px] bg-primary rounded-[4px] flex items-center justify-center">
                   <svg className="block size-[30px]" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5h4V9h2v3h4l-5 5z" fill="white" />
                   </svg>
@@ -363,7 +368,7 @@ export default function ArticlePage() {
                   </p>
                 </div>
                 <svg className="ml-auto" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5h4V9h2v3h4l-5 5z" fill="#183542" />
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5h4V9h2v3h4l-5 5z" fill="var(--color-primary)" />
                 </svg>
               </a>
             ))}
@@ -373,7 +378,7 @@ export default function ArticlePage() {
 
       {/* Image et vidéos lier a l'article */}
       {projectFiles.length > 0 && (
-        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-[#f3f3f5]">
+        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-gray-50">
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[40px] text-black w-full">
             {t(language, "imageEtVideos")}
           </p>
@@ -395,7 +400,7 @@ export default function ArticlePage() {
             {projectFiles.length > 8 && !showFullMedia && (
               <button
                 onClick={() => setShowFullMedia(true)}
-                className="aspect-square rounded-[4px] bg-[#183542] flex items-center justify-center hover:bg-[#0f1f27] transition-colors h-[200px] w-full"
+                className="aspect-square rounded-[4px] bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors h-[200px] w-full"
               >
                 <span className="text-white text-[32px] font-bold">+</span>
               </button>

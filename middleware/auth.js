@@ -1,6 +1,13 @@
 const jwt = require("jsonwebtoken");
 
-const SECRET_KEY = process.env.JWT_SECRET || "your-super-secret-key-change-in-prod";
+// SÉCURITÉ: Le JWT_SECRET DOIT être défini dans .env
+const SECRET_KEY = process.env.JWT_SECRET;
+
+if (!SECRET_KEY) {
+  console.error("❌ ERREUR CRITIQUE: JWT_SECRET n'est pas défini dans .env");
+  console.error("⚠️ Ajouter JWT_SECRET=<une-clé-très-sécurisée> dans votre fichier .env");
+  process.exit(1);
+}
 
 // Middleware: Vérifier JWT
 const authenticateToken = (req, res, next) => {

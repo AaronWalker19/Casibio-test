@@ -3,7 +3,26 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { check, validationResult } = require("express-validator");
 let db;
+
+// SÉCURITÉ: Validateur de chemin de fichier
+const validateFilePath = (filePath, baseDir) => {
+  const resolvedPath = path.resolve(baseDir, filePath);
+  const resolvedBase = path.resolve(baseDir);
+  return resolvedPath.startsWith(resolvedBase);
+};
+
+// SÉCURITÉ: Middleware pour valider les IDs numériques
+const validateNumericId = (paramName) => {
+  return (req, res, next) => {
+    const id = req.params[paramName];
+    if (!/^\d+$/.test(id)) {
+      return res.status(400).json({ error: "ID invalide" });
+    }
+    next();
+  };
+};
 
 // Fonction pour transformer un chemin de fichier en URL
 const getFileUrl = (filePath) => {
@@ -73,16 +92,32 @@ router.use((req, res, next) => {
 });
 
 // CREATE - POST /api/projects
-router.post("/", requireDB, authenticateToken, upload.array("files"), async (req, res) => {
-  const {
-    code_anr,
-    title_fr,
-    title_en,
-    summary_fr,
-    summary_en
-  } = req.body;
+router.post("/", 
+  requireDB, 
+  authenticateToken, 
+  upload.array("files"),
+  [
+    check('code_anr').trim().isLength({ max: 100 }).optional(),
+    check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
+    check('title_en').trim().isLength({ max: 255 }).notEmpty(),
+    check('summary_fr').trim().isLength({ max: 5000 }).optional(),
+    check('summary_en').trim().isLength({ max: 5000 }).optional(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  try {
+    const {
+      code_anr,
+      title_fr,
+      title_en,
+      summary_fr,
+      summary_en
+    } = req.body;
+
+    try {
     const sql = `
       INSERT INTO projects
       (code_anr, title_fr, title_en, summary_fr, summary_en, created_by)
@@ -116,12 +151,17 @@ router.post("/", requireDB, authenticateToken, upload.array("files"), async (req
     res.json({ id: projectId, message: "Projet créé avec succès" });
   } catch (err) {
     console.error("Create project error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Erreur lors de la création du projet" });
   }
 });
 
 // UPLOAD FILES TO EXISTING PROJECT - POST /api/projects/:projectId/upload
-router.post("/:projectId/upload", requireDB, authenticateToken, upload.array("files"), async (req, res) => {
+router.post("/:projectId/upload", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  upload.array("files"), 
+  async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "Aucun fichier fourni" });
   }
@@ -166,7 +206,6 @@ router.get("/files/all", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at, project_id FROM project_files ORDER BY created_at DESC");
     const rows = await stmt.all();
-    // Transformer les chemins en URLs
     const filesWithUrls = rows.map(row => ({
       ...row,
       file_path: getFileUrl(row.file_path)
@@ -174,7 +213,7 @@ router.get("/files/all", requireDB, async (req, res) => {
     res.json(filesWithUrls);
   } catch (err) {
     console.error("Get all files error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Erreur lors de la récupération des fichiers" });
   }
 });
 
@@ -191,23 +230,25 @@ router.get("/", requireDB, async (req, res) => {
 });
 
 // GET ONE - GET /api/projects/:projectId
-router.get("/:projectId", requireDB, async (req, res) => {
+router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
     const row = await stmt.get(req.params.projectId);
+    if (!row) {
+      return res.status(404).json({ error: "Projet non trouvé" });
+    }
     res.json(row);
   } catch (err) {
     console.error("Get project error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Erreur lors de la récupération du projet" });
   }
 });
 
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
-router.get("/:projectId/files", requireDB, async (req, res) => {
+router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
     const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
-    // Transformer les chemins en URLs
     const filesWithUrls = rows.map(row => ({
       ...row,
       file_path: getFileUrl(row.file_path)
@@ -215,151 +256,220 @@ router.get("/:projectId/files", requireDB, async (req, res) => {
     res.json(filesWithUrls);
   } catch (err) {
     console.error("Get files error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Erreur lors de la récupération des fichiers" });
   }
 });
 
 // DOWNLOAD FILE - GET /api/projects/:projectId/file/:fileId/download
-router.get("/:projectId/file/:fileId/download", requireDB, async (req, res) => {
-  try {
-    const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
-    const row = await stmt.get(req.params.fileId, req.params.projectId);
+router.get("/:projectId/file/:fileId/download", 
+  requireDB, 
+  validateNumericId('projectId'),
+  validateNumericId('fileId'),
+  async (req, res) => {
+    try {
+      const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
+      const row = await stmt.get(req.params.fileId, req.params.projectId);
 
-    if (!row || !row.file_path) {
-      return res.status(404).json({ error: "Fichier non trouvé" });
+      if (!row || !row.file_path) {
+        return res.status(404).json({ error: "Fichier non trouvé" });
+      }
+
+      // SÉCURITÉ: Valider le chemin pour éviter path traversal
+      if (!validateFilePath(row.file_path, uploadsDir)) {
+        console.warn(`⚠️ Tentative de path traversal: ${row.file_path}`);
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+
+      const fullFilePath = path.join(uploadsDir, row.file_path);
+      
+      res.setHeader("Content-Type", row.file_type);
+      res.setHeader("Content-Disposition", `attachment; filename="${row.file_name}"`);
+      res.download(fullFilePath, row.file_name);
+    } catch (err) {
+      console.error("Download file error:", err);
+      return res.status(500).json({ error: "Erreur lors du téléchargement" });
     }
-
-    // Reconstruire le chemin complet du fichier
-    const fullFilePath = path.join(uploadsDir, row.file_path);
-    
-    res.setHeader("Content-Type", row.file_type);
-    res.setHeader("Content-Disposition", `attachment; filename="${row.file_name}"`);
-    res.download(fullFilePath, row.file_name);
-  } catch (err) {
-    console.error("Download file error:", err);
-    return res.status(500).json({ error: err.message });
   }
-});
+);
 
 // VIEW FILE - GET /api/projects/:projectId/file/:fileId/view
-router.get("/:projectId/file/:fileId/view", requireDB, async (req, res) => {
-  try {
-    const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
-    const row = await stmt.get(req.params.fileId, req.params.projectId);
+router.get("/:projectId/file/:fileId/view", 
+  requireDB,
+  validateNumericId('projectId'),
+  validateNumericId('fileId'),
+  async (req, res) => {
+    try {
+      const stmt = db.prepare("SELECT file_path, file_name, file_type FROM project_files WHERE id = ? AND project_id = ?");
+      const row = await stmt.get(req.params.fileId, req.params.projectId);
 
-    if (!row || !row.file_path) {
-      return res.status(404).json({ error: "Fichier non trouvé" });
+      if (!row || !row.file_path) {
+        return res.status(404).json({ error: "Fichier non trouvé" });
+      }
+
+      // SÉCURITÉ: Valider le chemin
+      if (!validateFilePath(row.file_path, uploadsDir)) {
+        console.warn(`⚠️ Tentative de path traversal: ${row.file_path}`);
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+
+      const fullFilePath = path.join(uploadsDir, row.file_path);
+
+      res.setHeader("Content-Type", row.file_type);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.sendFile(fullFilePath);
+    } catch (err) {
+      console.error("View file error:", err);
+      return res.status(500).json({ error: "Erreur lors de la consultation du fichier" });
     }
-
-    // Reconstruire le chemin complet du fichier
-    const fullFilePath = path.join(uploadsDir, row.file_path);
-
-    res.setHeader("Content-Type", row.file_type);
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.sendFile(fullFilePath);
-  } catch (err) {
-    console.error("View file error:", err);
-    return res.status(500).json({ error: err.message });
   }
-});
+);
 
 // RENAME FILE - PUT /api/projects/:projectId/file/:fileId/rename
-router.put("/:projectId/file/:fileId/rename", requireDB, authenticateToken, async (req, res) => {
-  const { new_name } = req.body;
-
-  if (!new_name) {
-    return res.status(400).json({ error: "Le nouveau nom est requis" });
-  }
-
-  try {
-    const stmt = db.prepare("UPDATE project_files SET file_display_name = ? WHERE id = ? AND project_id = ?");
-    await stmt.run(new_name, req.params.fileId, req.params.projectId);
-    res.json({ message: "Fichier renommé avec succès" });
-  } catch (err) {
-    console.error("Rename file error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
-router.delete("/:projectId/file/:fileId", requireDB, authenticateToken, async (req, res) => {
-  try {
-    // Récupérer le chemin du fichier avant suppression
-    const getStmt = db.prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
-    const row = await getStmt.get(req.params.fileId, req.params.projectId);
-
-    // Supprimer de la base de données
-    const delStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
-    await delStmt.run(req.params.fileId, req.params.projectId);
-
-    // Supprimer le fichier du disque s'il existe
-    if (row && row.file_path) {
-      const fullFilePath = path.join(uploadsDir, row.file_path);
-      if (fs.existsSync(fullFilePath)) {
-        try {
-          fs.unlinkSync(fullFilePath);
-          console.log(`Fichier supprimé du disque: ${fullFilePath}`);
-        } catch (fsErr) {
-          console.error("Erreur suppression fichier disque:", fsErr);
-        }
-      }
+router.put("/:projectId/file/:fileId/rename", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  validateNumericId('fileId'),
+  [
+    check('new_name').trim().isLength({ min: 1, max: 255 }).notEmpty()
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    res.json({ message: "Fichier supprimé avec succès" });
-  } catch (err) {
-    console.error("Delete file error:", err);
-    return res.status(500).json({ error: err.message });
+    const { new_name } = req.body;
+
+    try {
+      const stmt = db.prepare("UPDATE project_files SET file_display_name = ? WHERE id = ? AND project_id = ?");
+      await stmt.run(new_name, req.params.fileId, req.params.projectId);
+      res.json({ message: "Fichier renommé avec succès" });
+    } catch (err) {
+      console.error("Rename file error:", err);
+      return res.status(500).json({ error: "Erreur lors du renommage" });
+    }
   }
-});
+);
 
-// UPDATE PROJECT - PUT /api/projects/:projectId
-router.put("/:projectId", requireDB, authenticateToken, async (req, res) => {
-  const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
-  
-  try {
-    const sql = `
-      UPDATE projects 
-      SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `;
+// DELETE FILE - DELETE /api/projects/:projectId/file/:fileId
+router.delete("/:projectId/file/:fileId", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  validateNumericId('fileId'),
+  async (req, res) => {
+    try {
+      const getStmt = db.prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
+      const row = await getStmt.get(req.params.fileId, req.params.projectId);
 
-    const stmt = db.prepare(sql);
-    await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId);
-    res.json({ message: "Projet modifié avec succès" });
-  } catch (err) {
-    console.error("Update project error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
+      // SÉCURITÉ: Vérifier le chemin avant suppression
+      if (row && row.file_path && !validateFilePath(row.file_path, uploadsDir)) {
+        console.warn(`⚠️ Tentative de path traversal lors de suppression: ${row.file_path}`);
+        return res.status(403).json({ error: "Accès refusé" });
+      }
 
-// DELETE PROJECT - DELETE /api/projects/:projectId
-router.delete("/:projectId", requireDB, authenticateToken, async (req, res) => {
-  try {
-    // Récupérer tous les fichiers du projet
-    const getFilesStmt = db.prepare("SELECT file_path FROM project_files WHERE project_id = ?");
-    const files = await getFilesStmt.all(req.params.projectId);
+      const delStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
+      await delStmt.run(req.params.fileId, req.params.projectId);
 
-    // Supprimer le projet (et ses fichiers grâce à ON DELETE CASCADE)
-    const delStmt = db.prepare("DELETE FROM projects WHERE id = ?");
-    await delStmt.run(req.params.projectId);
-
-    // Supprimer les fichiers du disque
-    files.forEach(file => {
-      if (file.file_path && fs.existsSync(file.file_path)) {
-        try {
-          fs.unlinkSync(file.file_path);
-          console.log(`Fichier supprimé du disque: ${file.file_path}`);
-        } catch (fsErr) {
-          console.error("Erreur suppression fichier disque:", fsErr);
+      if (row && row.file_path) {
+        const fullFilePath = path.join(uploadsDir, row.file_path);
+        if (fs.existsSync(fullFilePath)) {
+          try {
+            fs.unlinkSync(fullFilePath);
+            console.log(`Fichier supprimé du disque: ${fullFilePath}`);
+          } catch (fsErr) {
+            console.error("Erreur suppression fichier disque:", fsErr);
+          }
         }
       }
-    });
 
-    res.json({ message: "Projet supprimé avec succès" });
-  } catch (err) {
-    console.error("Delete project error:", err);
-    return res.status(500).json({ error: err.message });
+      res.json({ message: "Fichier supprimé avec succès" });
+    } catch (err) {
+      console.error("Delete file error:", err);
+      return res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
   }
-});
+);
+
+// UPDATE PROJECT - PUT /api/projects/:projectId
+router.put("/:projectId", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  [
+    check('code_anr').trim().isLength({ max: 100 }).optional(),
+    check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
+    check('title_en').trim().isLength({ max: 255 }).notEmpty(),
+    check('summary_fr').trim().isLength({ max: 5000 }).optional(),
+    check('summary_en').trim().isLength({ max: 5000 }).optional(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
+    
+    try {
+      const sql = `
+        UPDATE projects 
+        SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+
+      const stmt = db.prepare(sql);
+      await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId);
+      res.json({ message: "Projet modifié avec succès" });
+    } catch (err) {
+      console.error("Update project error:", err);
+      return res.status(500).json({ error: "Erreur lors de la modification" });
+    }
+  }
+);
+
+// DELETE PROJECT - DELETE /api/projects/:projectId
+router.delete("/:projectId", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  async (req, res) => {
+    try {
+      const getFilesStmt = db.prepare("SELECT file_path FROM project_files WHERE project_id = ?");
+      const files = await getFilesStmt.all(req.params.projectId);
+
+      // SÉCURITÉ: Vérifier tous les chemins avant suppression
+      for (const file of files) {
+        if (file.file_path && !validateFilePath(file.file_path, uploadsDir)) {
+          console.warn(`⚠️ Fichier suspect: ${file.file_path}`);
+          return res.status(403).json({ error: "Accès refusé" });
+        }
+      }
+
+      const delStmt = db.prepare("DELETE FROM projects WHERE id = ?");
+      await delStmt.run(req.params.projectId);
+
+      files.forEach(file => {
+        if (file.file_path) {
+          const fullFilePath = path.join(uploadsDir, file.file_path);
+          if (fs.existsSync(fullFilePath)) {
+            try {
+              fs.unlinkSync(fullFilePath);
+              console.log(`Fichier supprimé: ${fullFilePath}`);
+            } catch (fsErr) {
+              console.error("Erreur suppression:", fsErr);
+            }
+          }
+        }
+      });
+
+      res.json({ message: "Projet supprimé avec succès" });
+    } catch (err) {
+      console.error("Delete project error:", err);
+      return res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
+  }
+);
 
 module.exports = router;

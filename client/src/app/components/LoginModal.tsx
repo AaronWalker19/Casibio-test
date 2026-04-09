@@ -57,7 +57,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
       
-      <div className="relative bg-[#183542] rounded-[8px] shadow-2xl p-[50px] w-full max-w-[500px] mx-[20px]" onClick={(e) => e.stopPropagation()}>
+      <div className="relative bg-primary rounded-[8px] shadow-2xl p-[50px] w-full max-w-[500px] mx-[20px]" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
           className="absolute top-[20px] right-[20px] text-white text-[28px] hover:opacity-70 transition"
@@ -79,7 +79,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="bg-[#e9ebef] border-0 rounded-[4px] p-[12px] font-['Inter:Regular',sans-serif] text-[16px] text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-white"
+              className="bg-gray-100 border-0 rounded-[4px] p-[12px] font-['Inter:Regular',sans-serif] text-[16px] text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-white"
               placeholder=""
               required
               disabled={loading}
@@ -94,7 +94,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-[#e9ebef] border-0 rounded-[4px] p-[12px] font-['Inter:Regular',sans-serif] text-[16px] text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-white"
+              className="bg-gray-100 border-0 rounded-[4px] p-[12px] font-['Inter:Regular',sans-serif] text-[16px] text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-white"
               placeholder=""
               required
               disabled={loading}
@@ -102,14 +102,14 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </div>
 
           {error && (
-            <div className="bg-[#ff4444] text-white p-[12px] rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px] text-center">
+            <div className="bg-error-accent text-white p-[12px] rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px] text-center">
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="bg-white text-[#183542] font-['Inter:Bold',sans-serif] font-bold text-[16px] p-[15px] rounded-[4px] hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-white text-primary font-['Inter:Bold',sans-serif] font-bold text-[16px] p-[15px] rounded-[4px] hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? "Connexion en cours..." : "Se connecter"}

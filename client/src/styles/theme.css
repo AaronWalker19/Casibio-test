@@ -1,48 +1,87 @@
+/* ==================== PALETTE PRINCIPALE ==================== */
 :root {
+  /* Dimensions */
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: #0a0908;
-  --card: #ffffff;
-  --card-foreground: #0a0908;
-  --popover: #ffffff;
-  --popover-foreground: #0a0908;
-  --primary: #030213;
-  --primary-foreground: #ffffff;
-  --secondary: #f2eff8;
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
+  --radius: 0.625rem;
+
+  /* -------- COULEURS PRIMAIRES -------- */
+  --color-primary: #183542;        /* Bleu-gris principal */
+  --color-primary-dark: #0f2835;   /* Bleu-gris très foncé */
+  --color-primary-darker: #0d1f28; /* Bleu-gris encore plus foncé */
+
+  /* -------- COULEURS NEUTRES (Clairs) -------- */
+  --color-white: #ffffff;          /* Blanc pur */
+  --color-white-off: #faf8f7;      /* Blanc cassé */
+  --color-gray-50: #f3f3f5;        /* Gris très clair */
+  --color-gray-100: #e9ebef;       /* Gris ultra-pâle */
+  --color-gray-150: #ececf0;       /* Gris ultra-pâle variant */
+  --color-gray-200: #e5e5e5;       /* Gris très pâle */
+  --color-gray-300: #d9d9d9;       /* Gris pâle */
+  --color-gray-400: #c9c9c9;       /* Gris clair */
+  --color-gray-light: #f2eff8;     /* Gris-bleu ultra-pâle */
+
+  /* -------- COULEURS NEUTRES (Foncés) -------- */
+  --color-black: #030213;          /* Noir très foncé */
+  --color-black-alt: #0a0908;      /* Noir très foncé alternatif */
+  --color-black-variant: #1b0f0f;  /* Noir très foncé variant */
+  --color-dark-gray: #453c3e;      /* Gris-marron foncé */
+  --color-gray-medium: #706167;    /* Gris-marron moyen */
+  --color-gray-muted: #717182;     /* Gris bleuté */
+  --color-gray-muted-light: #b5adb0; /* Gris-marron clair */
+
+  /* -------- COULEURS STATUTS -------- */
+  --color-success: #137300;        /* Vert (réussi/complet) */
+  --color-warning: #ff9500;        /* Orange (avertissement) */
+  --color-error: #c9232c;          /* Rouge éclatant */
+  --color-error-accent: #ff404a;   /* Rouge appel à l'action */
+  --color-error-destructive: #d4183d; /* Rouge destructif */
+  --color-error-dark: #a01f26;     /* Rouge foncé (hover) */
+  --color-gold: #bd8100;           /* Or/doré foncé */
+
+  /* -------- VARIABLES DE COMPOSANTS (héritage) -------- */
+  --background: var(--color-white);
+  --foreground: var(--color-black-alt);
+  --card: var(--color-white);
+  --card-foreground: var(--color-black-alt);
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-black-alt);
+  --primary: var(--color-black);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-gray-light);
+  --secondary-foreground: var(--color-black);
+  --muted: var(--color-gray-150);
+  --muted-foreground: var(--color-gray-muted);
+  --accent: var(--color-gray-100);
+  --accent-foreground: var(--color-black);
+  --destructive: var(--color-error-destructive);
+  --destructive-foreground: var(--color-white);
   --border: rgba(0, 0, 0, 0.1);
   --input: transparent;
-  --input-background: #f3f3f5;
-  --ring: #0a0908;
-  --radius: 0.625rem;
+  --input-background: var(--color-gray-50);
+  --ring: var(--color-black-alt);
 }
 
 .dark {
-  --background: #0a0908;
-  --foreground: #faf8f7;
-  --card: #0a0908;
-  --card-foreground: #faf8f7;
-  --popover: #0a0908;
-  --popover-foreground: #faf8f7;
-  --primary: #faf8f7;
-  --primary-foreground: #1b0f0f;
-  --secondary: #453c3e;
-  --secondary-foreground: #faf8f7;
-  --muted: #453c3e;
-  --muted-foreground: #b5adb0;
-  --accent: #453c3e;
-  --accent-foreground: #faf8f7;
-  --destructive: #d4183d;
-  --destructive-foreground: #faf8f7;
-  --border: #453c3e;
-  --input: #453c3e;
-  --ring: #706167;
+  /* -------- VARIABLES DE COMPOSANTS EN MODE SOMBRE -------- */
+  --background: var(--color-black-alt);
+  --foreground: var(--color-white-off);
+  --card: var(--color-black-alt);
+  --card-foreground: var(--color-white-off);
+  --popover: var(--color-black-alt);
+  --popover-foreground: var(--color-white-off);
+  --primary: var(--color-white-off);
+  --primary-foreground: var(--color-black-variant);
+  --secondary: var(--color-dark-gray);
+  --secondary-foreground: var(--color-white-off);
+  --muted: var(--color-dark-gray);
+  --muted-foreground: var(--color-gray-muted-light);
+  --accent: var(--color-dark-gray);
+  --accent-foreground: var(--color-white-off);
+  --destructive: var(--color-error-destructive);
+  --destructive-foreground: var(--color-white-off);
+  --border: var(--color-dark-gray);
+  --input: var(--color-dark-gray);
+  --ring: var(--color-gray-medium);
 }
 
 * {

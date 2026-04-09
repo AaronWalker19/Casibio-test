@@ -14,7 +14,7 @@ export function GalleryCard({ title, date, filePath, fileType, onImageClick }: G
 
   return (
     <div
-      className="relative group cursor-pointer overflow-hidden rounded-[4px]"
+      className="relative group cursor-pointer overflow-hidden rounded-[4px] max-w-[30rem] max-h-[30rem]"
       onClick={onImageClick}
       role="button"
       tabIndex={0}
@@ -32,7 +32,7 @@ export function GalleryCard({ title, date, filePath, fileType, onImageClick }: G
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
             {/* Badge VIDÉO */}
-            <div className="absolute top-2 right-2 bg-[#ff404a] px-2 py-1 rounded text-white text-xs font-bold">
+            <div className="absolute top-2 right-2 bg-error-accent px-2 py-1 rounded text-white text-xs font-bold">
               VIDÉO
             </div>
           </div>
@@ -44,8 +44,8 @@ export function GalleryCard({ title, date, filePath, fileType, onImageClick }: G
           />
         )}
       </div>
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#183542] to-transparent p-[15px]">
-        <div className="bg-[#c9232c] content-stretch flex items-center justify-center p-[5px] mb-[8px] relative rounded-[4px] shrink-0 w-fit">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-transparent p-[15px]">
+        <div className="bg-error content-stretch flex items-center justify-center p-[5px] mb-[8px] relative rounded-[4px] shrink-0 w-fit">
           <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
             {date}
           </p>

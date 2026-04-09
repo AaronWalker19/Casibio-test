@@ -49,7 +49,7 @@ export default function BackMemberPage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="relative shrink-0 w-full bg-[#f3f3f5]">
+      <div className="relative shrink-0 w-full bg-gray-50">
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
             <div className="content-stretch flex gap-[40px] items-start relative shrink-0 w-full">
@@ -71,7 +71,7 @@ export default function BackMemberPage() {
                     value={newUser.username}
                     onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                     placeholder="Nom user"
-                    className="bg-white border-[#e5e5e5] border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-[#d9d9d9]"
+                    className="bg-white border-gray-200 border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
                   />
                 </div>
                 <div className="content-stretch flex flex-col flex-1 gap-[5px] items-start relative">
@@ -80,7 +80,7 @@ export default function BackMemberPage() {
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     placeholder="Email"
-                    className="bg-white border-[#e5e5e5] border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-[#d9d9d9]"
+                    className="bg-white border-gray-200 border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
                   />
                 </div>
                 <div className="content-stretch flex flex-col flex-1 gap-[5px] items-start relative">
@@ -89,12 +89,12 @@ export default function BackMemberPage() {
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     placeholder="Mot de passe"
-                    className="bg-white border-[#e5e5e5] border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-[#d9d9d9]"
+                    className="bg-white border-gray-200 border border-solid content-stretch flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="bg-[#183542] content-stretch flex items-center justify-center px-[40px] py-[12px] relative rounded-[4px] shrink-0"
+                  className="bg-primary content-stretch flex items-center justify-center px-[40px] py-[12px] relative rounded-[4px] shrink-0"
                 >
                   <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
                     Ajouter
@@ -103,7 +103,7 @@ export default function BackMemberPage() {
               </form>
             </div>
             <div className="bg-white content-stretch flex flex-col relative rounded-[8px] shadow-lg shrink-0 w-full overflow-hidden">
-              <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] bg-[#f3f3f5] p-[20px] border-b border-[#e5e5e5]">
+              <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
                 <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[20px] text-black">
                   Utilisateur
                 </p>
@@ -118,7 +118,7 @@ export default function BackMemberPage() {
                 </p>
               </div>
               {users.map((user) => (
-                <div key={user.id} className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] p-[20px] border-b border-[#e5e5e5] last:border-b-0 items-center">
+                <div key={user.id} className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
                   <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-black">
                     {user.username}
                   </p>
@@ -133,7 +133,7 @@ export default function BackMemberPage() {
                       );
                       setUsers(updatedUsers);
                     }}
-                    className="bg-white border-[#e5e5e5] border border-solid p-[8px] rounded-[4px] font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black"
+                    className="bg-white border-gray-200 border border-solid p-[8px] rounded-[4px] font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black"
                   >
                     <option value="Admin">Admin</option>
                     <option value="Membre">Membre</option>
@@ -141,7 +141,7 @@ export default function BackMemberPage() {
                   </select>
                   <button
                     onClick={() => handleDeleteUser(user.id)}
-                    className="bg-[#c9232c] content-stretch flex items-center justify-center px-[15px] py-[8px] relative rounded-[4px] shrink-0 hover:bg-[#a01f26] transition-colors"
+                    className="bg-error content-stretch flex items-center justify-center px-[15px] py-[8px] relative rounded-[4px] shrink-0 hover:bg-error-dark transition-colors"
                   >
                     <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-white whitespace-nowrap">
                       Supprimer

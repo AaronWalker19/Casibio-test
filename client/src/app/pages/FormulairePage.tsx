@@ -24,7 +24,7 @@ export default function FormulairePage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="bg-[#f3f3f5] content-stretch flex items-center gap-[20px] px-[50px] py-[20px] relative shrink-0 w-full">
+      <div className="bg-gray-50 content-stretch flex items-center gap-[20px] px-[50px] py-[20px] relative shrink-0 w-full">
         <Link to="/membres/articles" className="content-stretch flex gap-[10px] items-center relative shrink-0">
           <div className="relative shrink-0 size-[32px]">
             <svg className="block size-full" fill="none" viewBox="0 0 32 32">
@@ -38,7 +38,7 @@ export default function FormulairePage() {
         <div className="flex-1" />
         <button
           onClick={handleSubmit}
-          className="bg-[#137300] content-stretch flex gap-[10px] items-center justify-center px-[20px] py-[10px] relative rounded-[4px] shrink-0"
+          className="bg-success content-stretch flex gap-[10px] items-center justify-center px-[20px] py-[10px] relative rounded-[4px] shrink-0"
         >
           <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[24px] text-white whitespace-nowrap">
             Sauvegarder
@@ -49,7 +49,7 @@ export default function FormulairePage() {
             </svg>
           </div>
         </button>
-        <button className="bg-[#c9232c] content-stretch flex gap-[10px] items-center justify-center px-[20px] py-[10px] relative rounded-[4px] shrink-0">
+        <button className="bg-error content-stretch flex gap-[10px] items-center justify-center px-[20px] py-[10px] relative rounded-[4px] shrink-0">
           <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[24px] text-white whitespace-nowrap">
             supprimer
           </p>
@@ -65,13 +65,13 @@ export default function FormulairePage() {
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1200px]">
             <form onSubmit={handleSubmit} className="w-full">
               <div className="bg-white content-stretch flex flex-col gap-[30px] p-[40px] relative rounded-[8px] w-full">
-                <div aria-hidden="true" className="absolute border-[#f3f3f5] border-2 border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <div aria-hidden="true" className="absolute border-gray-50 border-2 border-solid inset-0 pointer-events-none rounded-[8px]" />
                 <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-full">
                   <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[32px] text-black w-full">
                     Premiere Information
                   </p>
-                  <div className="h-[4px] w-full bg-[#f3f3f5] rounded-full relative">
-                    <div className="h-full w-[25%] bg-[#183542] rounded-full" />
+                  <div className="h-[4px] w-full bg-gray-50 rounded-full relative">
+                    <div className="h-full w-[25%] bg-primary rounded-full" />
                   </div>
                 </div>
                 <div className="content-stretch flex flex-col gap-[20px] items-start relative shrink-0 w-full">
@@ -84,7 +84,7 @@ export default function FormulairePage() {
                       value={formData.codeANR}
                       onChange={(e) => setFormData({ ...formData, codeANR: e.target.value })}
                       placeholder="Code ANR"
-                      className="bg-white border-[#f3f3f5] border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-[#d9d9d9]"
+                      className="bg-white border-gray-50 border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-gray-300"
                     />
                   </div>
                   <div className="content-stretch flex gap-[20px] items-start relative shrink-0 w-full">
@@ -97,7 +97,7 @@ export default function FormulairePage() {
                         value={formData.titreFr}
                         onChange={(e) => setFormData({ ...formData, titreFr: e.target.value })}
                         placeholder="francais"
-                        className="bg-white border-[#f3f3f5] border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-[#d9d9d9]"
+                        className="bg-white border-gray-50 border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-gray-300"
                       />
                     </div>
                     <div className="content-stretch flex flex-col flex-1 gap-[10px] items-start relative">
@@ -109,7 +109,7 @@ export default function FormulairePage() {
                         value={formData.titreEn}
                         onChange={(e) => setFormData({ ...formData, titreEn: e.target.value })}
                         placeholder="English"
-                        className="bg-white border-[#f3f3f5] border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-[#d9d9d9]"
+                        className="bg-white border-gray-50 border-2 border-solid content-stretch flex items-center p-[15px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-gray-300"
                       />
                     </div>
                   </div>
@@ -123,7 +123,7 @@ export default function FormulairePage() {
                         onChange={(e) => setFormData({ ...formData, resumeFr: e.target.value })}
                         placeholder="francais"
                         rows={6}
-                        className="bg-white border-[#f3f3f5] border-2 border-solid content-stretch flex items-start p-[15px] relative rounded-[4px] resize-none shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-[#d9d9d9]"
+                        className="bg-white border-gray-50 border-2 border-solid content-stretch flex items-start p-[15px] relative rounded-[4px] resize-none shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-gray-300"
                       />
                     </div>
                     <div className="content-stretch flex flex-col flex-1 gap-[10px] items-start relative">
@@ -135,14 +135,14 @@ export default function FormulairePage() {
                         onChange={(e) => setFormData({ ...formData, resumeEn: e.target.value })}
                         placeholder="English"
                         rows={6}
-                        className="bg-white border-[#f3f3f5] border-2 border-solid content-stretch flex items-start p-[15px] relative rounded-[4px] resize-none shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-[#d9d9d9]"
+                        className="bg-white border-gray-50 border-2 border-solid content-stretch flex items-start p-[15px] relative rounded-[4px] resize-none shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black placeholder:text-gray-300"
                       />
                     </div>
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="bg-[#183542] content-stretch flex items-center justify-center px-[40px] py-[15px] relative rounded-[4px] shrink-0 w-full"
+                  className="bg-primary content-stretch flex items-center justify-center px-[40px] py-[15px] relative rounded-[4px] shrink-0 w-full"
                 >
                   <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-white whitespace-nowrap">
                     suivant

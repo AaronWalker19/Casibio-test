@@ -73,7 +73,7 @@ export default function MemberArticlesPage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="relative shrink-0 w-full bg-[#f3f3f5]">
+      <div className="relative shrink-0 w-full bg-gray-50">
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
             <div className="content-stretch flex gap-[40px] items-start relative shrink-0 w-full">
@@ -110,7 +110,7 @@ export default function MemberArticlesPage() {
               </div>
               <Link
                 to="/formulaire"
-                className="bg-[#183542] content-stretch flex gap-[10px] items-center justify-center px-[40px] py-[15px] relative rounded-[4px] shrink-0"
+                className="bg-primary content-stretch flex gap-[10px] items-center justify-center px-[40px] py-[15px] relative rounded-[4px] shrink-0"
               >
                 <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[24px] text-white whitespace-nowrap">
                   Ajouter un articles
@@ -124,7 +124,7 @@ export default function MemberArticlesPage() {
             </div>
             <div className="grid grid-cols-3 gap-[40px] w-full">
               {articles.map((article) => (
-                <div key={article.id} className="bg-[#183542] content-stretch flex flex-col items-center pb-[103px] relative rounded-[4px] shrink-0" data-name="article">
+                <div key={article.id} className="bg-primary content-stretch flex flex-col items-center pb-[103px] relative rounded-[4px] shrink-0" data-name="article">
                   <button
                     onClick={() => handleDeleteArticle(article.id)}
                     className="absolute right-[10px] top-[10px] z-10 bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
@@ -138,22 +138,22 @@ export default function MemberArticlesPage() {
                   </div>
                   <div className="content-stretch flex flex-col gap-[5px] items-end mb-[-103px] px-[10px] relative shrink-0 w-full">
                     <div className="content-stretch flex gap-[5px] items-center relative shrink-0 w-full">
-                      <div className="bg-[#c9232c] content-stretch flex items-center justify-center p-[5px] relative rounded-[4px] shrink-0">
+                      <div className="bg-error content-stretch flex items-center justify-center p-[5px] relative rounded-[4px] shrink-0">
                         <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
                           {article.date}
                         </p>
                       </div>
                       <div className={`content-stretch flex items-center justify-center p-[5px] relative rounded-[4px] shrink-0 ${
-                        article.status === "Completé" ? "bg-[#137300]" : "bg-[#d4a017]"
+                        article.status === "Completé" ? "bg-success" : "bg-gold"
                       }`}>
                         <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
                           {article.status}
                         </p>
                       </div>
                     </div>
-                    <div className="bg-[#f3f3f5] relative rounded-[4px] shrink-0 w-full">
+                    <div className="bg-gray-50 relative rounded-[4px] shrink-0 w-full">
                       <div className="flex flex-col items-center justify-center size-full">
-                        <div className="content-stretch flex flex-col gap-[10px] items-center justify-center leading-[normal] not-italic p-[20px] relative text-[#183542] text-center w-full">
+                        <div className="content-stretch flex flex-col gap-[10px] items-center justify-center leading-[normal] not-italic p-[20px] relative text-primary text-center w-full">
                           <p className="font-['Inter:Bold',sans-serif] font-bold relative shrink-0 text-[24px] w-full">
                             {article.title}
                           </p>

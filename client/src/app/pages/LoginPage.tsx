@@ -41,44 +41,44 @@ export default function LoginPage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="flex-1 flex items-center justify-center w-full bg-[#f3f3f5]">
+      <div className="flex-1 flex items-center justify-center w-full bg-gray-50">
         <div className="bg-white rounded-[4px] shadow-lg p-[50px] w-[500px]">
-          <h1 className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-[#183542] mb-[40px] text-center">
+          <h1 className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-primary mb-[40px] text-center">
             Connexion
           </h1>
           <form onSubmit={handleLogin} className="flex flex-col gap-[20px]">
             <div className="flex flex-col gap-[10px]">
-              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-[#183542]">
+              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-primary">
                 Nom d'utilisateur
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="border border-[#183542] rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
+                className="border border-primary rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
                 required
               />
             </div>
             <div className="flex flex-col gap-[10px]">
-              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-[#183542]">
+              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-primary">
                 Mot de passe
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border border-[#183542] rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
+                className="border border-primary rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
                 required
               />
             </div>
             {error && (
-              <div className="bg-[#ff4444] text-white p-[10px] rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px]">
+              <div className="bg-error-accent text-white p-[10px] rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px]">
                 {error}
               </div>
             )}
             <button
               type="submit"
-              className="bg-[#183542] text-white font-['Inter:Bold',sans-serif] font-bold text-[16px] p-[15px] rounded-[4px] hover:bg-[#0e1f2a] transition"
+              className="bg-primary text-white font-['Inter:Bold',sans-serif] font-bold text-[16px] p-[15px] rounded-[4px] hover:bg-primary-dark transition"
             >
               Se connecter
             </button>

@@ -3,6 +3,8 @@ import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { GalleryCard } from "../components/GalleryCard.tsx";
 import { GalleryLightbox } from "../components/GalleryLightbox.tsx";
+import { useLanguage } from "../../contexts/LanguageContext.tsx";
+import { t } from "../../contexts/translations.tsx";
 
 interface GalleryFile {
   id: number;
@@ -14,6 +16,7 @@ interface GalleryFile {
 }
 
 export default function GalleriePage() {
+  const { language } = useLanguage();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,16 +70,16 @@ export default function GalleriePage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="bg-[#183542] content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
-        <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-[#ff404a] w-full">
-          Gallerie
+      <div className="bg-primary content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
+        <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-error-accent w-full">
+          {t(language, "gallerie")}
         </p>
         <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-white w-full">
-          Parcourez toutes les photos de notre projet
+          {t(language, "parcourezPhotos")}
         </p>
       </div>
       <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-[#f3f3f5] border-b border-solid inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="absolute border-gray-50 border-b border-solid inset-0 pointer-events-none" />
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full">
             <div className="content-stretch flex items-center justify-end gap-[20px] relative shrink-0 w-full">
@@ -84,7 +87,7 @@ export default function GalleriePage() {
               <div className="relative flex items-center h-[40px]">
                 <input
                   type="text"
-                  placeholder="Rechercher..."
+                  placeholder={t(language, "rechercher")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="p-[10px] pl-[40px] rounded-[4px] border border-black w-[200px] font-['Inter:Regular',sans-serif] h-full"
@@ -109,8 +112,8 @@ export default function GalleriePage() {
                   </div>
                   <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-black whitespace-nowrap">
                     {sortBy === "date-asc"
-                      ? "Date (Plus ancien)"
-                      : "Date (Plus récent)"}
+                      ? t(language, "datePlusAncien")
+                      : t(language, "datePlusRecent")}
                   </p>
                 </button>
 
@@ -122,22 +125,22 @@ export default function GalleriePage() {
                         setSortBy("date-asc");
                         setShowSortMenu(false);
                       }}
-                      className={`block w-full text-left px-[20px] py-[10px] hover:bg-gray-100 ${
-                        sortBy === "date-asc" ? "bg-[#ff404a] text-white" : ""
+                      className={`block w-full text-left px-[20px] py-[10px]  ${
+                        sortBy === "date-asc" ? "bg-error-accent text-white hover:bg-error-accent" : "hover:bg-gray-100"
                       }`}
                     >
-                      Date (Plus ancien)
+                      {t(language, "datePlusAncien")}
                     </button>
                     <button
                       onClick={() => {
                         setSortBy("date-desc");
                         setShowSortMenu(false);
                       }}
-                      className={`block w-full text-left px-[20px] py-[10px] hover:bg-gray-100 ${
-                        sortBy === "date-desc" ? "bg-[#ff404a] text-white" : ""
+                      className={`block w-full text-left px-[20px] py-[10px]  ${
+                        sortBy === "date-desc" ? "bg-error-accent text-white hover:bg-error-accent" : "hover:bg-gray-100"
                       }`}
                     >
-                      Date (Plus récent)
+                      {t(language, "datePlusRecent")}
                     </button>
                   </div>
                 )}
@@ -146,13 +149,13 @@ export default function GalleriePage() {
             {loadingGallery ? (
               <div className="col-span-4 text-center py-[50px]">
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
-                  Chargement des fichiers...
+                  {t(language, "chargementFichiers")}
                 </p>
               </div>
             ) : errorGallery ? (
               <div className="col-span-4 text-center py-[50px]">
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-red-500">
-                  Erreur lors du chargement des fichiers
+                  {t(language, "erreurChargementFichiers")}
                 </p>
               </div>
             ) : (
@@ -163,7 +166,7 @@ export default function GalleriePage() {
                       key={file.id}
                       id={file.id}
                       title={file.file_display_name}
-                      date={new Date(file.created_at).toLocaleDateString('fr-FR')}
+                      date={new Date(file.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US')}
                       filePath={file.file_path}
                       fileType={file.file_type}
                       onImageClick={() => handleImageClick(index)}
@@ -172,7 +175,7 @@ export default function GalleriePage() {
                 ) : (
                   <div className="col-span-4 text-center py-[50px]">
                     <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
-                      Aucun fichier trouvé
+                      {t(language, "aucunFichierTrouve")}
                     </p>
                   </div>
                 )}

@@ -1,6 +1,7 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import HomePage from "./pages/HomePage.tsx";
 import HistoirePage from "./pages/HistoirePage.tsx";
+import PlanDuSitePage from "./pages/PlanDuSitePage.tsx";
 import ArticlesPage from "./pages/articles/page.tsx";
 import ArticlePage from "./pages/articles/[id].tsx";
 import MemberArticlesPage from "./pages/MemberArticlesPage.tsx";
@@ -19,6 +20,10 @@ export const router = createBrowserRouter([
     Component: HistoirePage,
   },
   {
+    path: "/plan-du-site",
+    Component: PlanDuSitePage,
+  },
+  {
     path: "/articles",
     Component: ArticlesPage,
   },
@@ -32,11 +37,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/membres/articles",
-    Component: MemberArticlesPage,
+    Component: () => <ProtectedRoute><MemberArticlesPage /></ProtectedRoute>,
   },
   {
     path: "/formulaire",
-    Component: FormulairePage,
+    Component: () => <ProtectedRoute><FormulairePage /></ProtectedRoute>,
   },
   {
     path: "/backoffice/articles",
@@ -45,5 +50,9 @@ export const router = createBrowserRouter([
   {
     path: "/backoffice/membres",
     Component: () => <ProtectedRoute><BackMemberPage /></ProtectedRoute>,
+  },
+  {
+    path: "*",
+    Component: () => <Navigate to="/" replace />,
   },
 ]);
