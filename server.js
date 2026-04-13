@@ -9,7 +9,21 @@ const app = express();
 console.log("🚀 SERVER START - MYSQL VERSION");
 
 // ===== SÉCURITÉ: Headers de sécurité =====
-app.use(helmet()); // Ajoute les headers de sécurité (HSTS, X-Frame-Options, etc.)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],  // ✅ Autorise les images externes (Unsplash, etc.)
+      fontSrc: ["'self'", "data:", "https:", "http:"],
+      connectSrc: ["'self'", "https:", "http:"],
+      mediaSrc: ["'self'", "https:", "http:"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'self'"],
+    },
+  },
+})); // ✅ Configuration CSP personnalisée
 
 // ===== CONFIGURATION MYSQL =====
 const mysqlConfig = {
@@ -67,6 +81,9 @@ app.use("/api/", apiLimiter);
 
 // ===== SERVE UPLOADS FOLDER =====
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ===== SERVE PUBLIC ASSETS =====
+app.use(express.static(path.join(__dirname, "client/public")));
 
 // ===== ROUTES API =====
 try {
@@ -226,6 +243,7 @@ app.post("/api/admin/init-db", async (req, res) => {
     });
   }
 });
+app.use(express.static(path.join(__dirname, "client/public")));
 
 // ===== SERVE FRONTEND =====
 app.use(express.static(path.join(__dirname, "client/build")));

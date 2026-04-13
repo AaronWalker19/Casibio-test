@@ -9,6 +9,7 @@ import { useLanguage } from "../../contexts/LanguageContext.tsx";
 import { t } from "../../contexts/translations.tsx";
 import svgPaths from "../../imports/Home/svg-1u6sm0pn16.ts";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
+import { IMAGE_PLACEHOLDER_LARGE_SVG } from "../../constants/placeholders.ts";
 
 interface Article {
   id: number;
@@ -56,16 +57,13 @@ const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
 
 function Frame4() {
   return (
-    <div className=" flex gap-[10px] items-start justify-center p-[5px] relative rounded-[4px] shrink-0">
-      <div aria-hidden="true" className="absolute border border-solid border-white inset-0 pointer-events-none rounded-[4px]" />
-      <div className="relative shrink-0 size-[16px]" data-name="game-icons:round-potion">
-        <div className="absolute inset-[5.27%_14.92%_4.88%_11.34%]" data-name="Vector">
-          <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 11.7984 14.375">
-            <path d={svgPaths.p83c3df0} fill="var(--fill-0, white)" id="Vector" />
-          </svg>
-        </div>
+    <div className="flex gap-[10px] items-start justify-center p-[5px] rounded-[4px] border border-white">
+      <div className="size-[16px] relative">
+        <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 11.7984 14.375">
+          <path d={svgPaths.p83c3df0} fill="white" id="Vector" />
+        </svg>
       </div>
-      <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+      <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
         ANR-23-CE08-0002
       </p>
     </div>
@@ -74,15 +72,13 @@ function Frame4() {
 
 function Group1() {
   return (
-    <div className="flex-[1_0_0] h-full min-h-px min-w-px relative" data-name="Group">
-      <div className="absolute inset-[-5.42%]">
-        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 25.835 25.8345">
-          <g id="Group">
-            <path d={svgPaths.p2fe8e000} id="Vector" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.52618" />
-            <path d={svgPaths.p3650c900} id="Vector_2" stroke="var(--stroke-0, white)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.52618" />
-          </g>
-        </svg>
-      </div>
+    <div className="h-full flex-1 relative">
+      <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 25.835 25.8345">
+        <g id="Group">
+          <path d={svgPaths.p2fe8e000} id="Vector" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.52618" />
+          <path d={svgPaths.p3650c900} id="Vector_2" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.52618" />
+        </g>
+      </svg>
     </div>
   );
 }
@@ -160,8 +156,20 @@ export default function HomePage() {
           throw new Error(t(language, "erreurChargementImages"));
         }
         const data = await response.json();
-        // Prendre les 3 premières images
-        const recentImages = data.slice(0, 3);
+        // Filtrer les images (exclure les vidéos) et trier par date décroissante
+        const imagesOnly = data.filter((file: GalleryImage) => {
+          const isImage = file.file_type?.toLowerCase().includes('image') ||
+                         file.file_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+          return isImage;
+        });
+        
+        // Trier par date décroissante (plus récent en premier)
+        const sortedImages = imagesOnly.sort((a: GalleryImage, b: GalleryImage) => {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+        
+        // Prendre les 3 premières images triées par date
+        const recentImages = sortedImages.slice(0, 3);
         setGalleryImagesFetched(recentImages);
         setLoadingGallery(false);
       } catch (err) {
@@ -172,94 +180,88 @@ export default function HomePage() {
 
     fetchGalleryImages();
   }, [language]);
+  // L'image la plus récente est maintenant la première du tableau (déjà triée et filtrée)
+  const latestImage = galleryImagesFetched.length > 0 ? galleryImagesFetched[0] : null;
+
   return (
-    <div className="bg-white  flex flex-col items-center relative size-full" data-name="home">
+    <div className="bg-white flex flex-col items-center size-full">
       <Navigation />
-      <div className="bg-primary  flex flex-col gap-[20px] items-center justify-center py-[150px] relative shrink-0 w-full" data-name="accueil">
-        <div className=" flex flex-col gap-[10px] items-center relative shrink-0">
+      <div className="bg-primary flex flex-col gap-4 sm:gap-5 md:gap-6 items-center justify-center py-16 sm:py-24 md:py-32 lg:py-40 w-full px-4">
+        <div className="flex flex-col gap-2 sm:gap-3 md:gap-4 items-center max-w-full">
           <Frame4 />
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-error-accent whitespace-nowrap">
+          <p className="font-['Inter:Bold',sans-serif] font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-error-accent break-words text-center">
             {t(language, "projetANRCasibio")}
           </p>
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic opacity-70 relative shrink-0 text-[14px] text-center text-white w-[901px]">
+          <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 text-xs sm:text-sm md:text-base text-center text-white max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl">
             {t(language, "projectDescription")}
           </p>
         </div>
-        <div className=" flex gap-[20px] items-start justify-center relative shrink-0">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5 items-center justify-center w-full">
           <Link
             to="/articles"
-            className="bg-primary  flex gap-[5.306px] h-[38.736px] items-center justify-center p-[3.79px] relative rounded-[3.032px] shrink-0"
-            data-name="Component 9"
+            className="bg-primary flex gap-1.5 sm:gap-2 h-9 sm:h-10 md:h-11 items-center justify-center px-3 sm:px-4 md:px-5 rounded-sm hover:bg-primary-dark transition w-full sm:w-auto"
           >
-            <div className=" flex items-center justify-center p-[3.885px] relative shrink-0 size-[31.078px]" data-name="tabler:books">
+            <div className="flex items-center justify-center p-1 size-6 sm:size-7 md:size-8 flex-shrink-0">
               <Group1 />
             </div>
-            <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[25.938px] text-white whitespace-nowrap">
+            <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-white whitespace-nowrap">
               {t(language, "articles")}
             </p>
-            <div className="h-[31.156px] relative shrink-0 w-[15.578px]" data-name="weui:arrow-filled">
-              <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">
-                <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.5595 16.5232">
-                  <path clipRule="evenodd" d={svgPaths.p4cfaf00} fill="var(--fill-0, white)" fillRule="evenodd" id="Vector" />
-                </svg>
-              </div>
+            <div className="h-6 sm:h-7 md:h-8 w-3 sm:w-4 md:w-5 flex-shrink-0 relative">
+              <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.5595 16.5232">
+                <path clipRule="evenodd" d={svgPaths.p4cfaf00} fill="white" fillRule="evenodd" id="Vector" />
+              </svg>
             </div>
           </Link>
           <Link
             to="/histoire"
-            className="bg-white  flex gap-[5.306px] h-[38.736px] items-center justify-center p-[3.79px] relative rounded-[3.032px] shrink-0 w-[197.464px]"
-            data-name="Component 10"
+            className="bg-white flex gap-1.5 sm:gap-2 h-9 sm:h-10 md:h-11 items-center justify-center px-3 sm:px-4 md:px-5 rounded-sm hover:bg-gray-100 transition w-full sm:w-auto"
           >
-            <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-primary text-[25.938px] whitespace-nowrap">
+            <p className="font-['Inter:Regular',sans-serif] font-normal text-primary text-base sm:text-lg md:text-xl whitespace-nowrap">
               {t(language, "enSavoirPlus")}
             </p>
-            <div className="h-[31.156px] relative shrink-0 w-[15.578px]" data-name="weui:arrow-filled">
-              <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">
-                <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.5595 16.5232">
-                  <path clipRule="evenodd" d={svgPaths.p4cfaf00} fill="var(--color-primary)" fillRule="evenodd" id="Vector" />
-                </svg>
-              </div>
+            <div className="h-6 sm:h-7 md:h-8 w-3 sm:w-4 md:w-5 flex-shrink-0 relative">
+              <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 9.5595 16.5232">
+                <path clipRule="evenodd" d={svgPaths.p4cfaf00} fill="var(--color-primary)" fillRule="evenodd" id="Vector" />
+              </svg>
             </div>
           </Link>
         </div>
       </div>
-      <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-[#f3f3f5] border-b border-solid border-t inset-0 pointer-events-none" />
-        <div className="flex flex-col items-center size-full">
-          <div className=" flex flex-col gap-[50px] items-center p-[50px] relative w-full">
-            <div className=" flex flex-col gap-[28px] items-start relative shrink-0 w-full">
-              <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[48px] text-black w-full">
+      <div className="w-full border-t border-b border-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="flex flex-col gap-8 sm:gap-10 md:gap-12 items-center px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
+            <div className="flex flex-col gap-6 sm:gap-7 md:gap-8 items-start w-full">
+              <p className="font-['Inter:Bold',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-black w-full">
                 {t(language, "dernieresPublications")}
               </p>
-              <div className=" flex items-center justify-between relative shrink-0 w-full">
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 w-full">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black">
                   {t(language, "decouvrezNosTravaux")}
                 </p>
-                <Link to="/articles" className=" flex gap-[10px] items-center relative shrink-0">
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
+                <Link to="/articles" className="flex gap-2 sm:gap-3 items-center hover:opacity-70 transition whitespace-nowrap">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black">
                     {t(language, "voirTout")}
                   </p>
-                  <div className="relative shrink-0 size-[30px]" data-name="maki:arrow">
-                    <div className="absolute inset-[13.33%_3.33%_13.42%_3.33%]" data-name="Vector">
-                      <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 27.9996 21.975">
-                        <path d={svgPaths.p14b61a80} fill="var(--fill-0, black)" id="Vector" />
-                      </svg>
-                    </div>
+                  <div className="size-6 sm:size-7 md:size-8 lg:size-10 relative flex-shrink-0">
+                    <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 27.9996 21.975">
+                      <path d={svgPaths.p14b61a80} fill="black" id="Vector" />
+                    </svg>
                   </div>
                 </Link>
               </div>
             </div>
-            <div className=" flex gap-[80px] items-center justify-center relative shrink-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10 w-full justify-items-center">
               {loadingArticles ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-500 col-span-full">
                   {t(language, "chargementArticles")}
                 </p>
               ) : errorArticles ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-red-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-red-500 col-span-full">
                   {errorArticles}
                 </p>
               ) : articles.length === 0 ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-500 col-span-full">
                   {t(language, "aucunArticleTrouve")}
                 </p>
               ) : (
@@ -283,77 +285,73 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      <div className="bg-primary  flex gap-[67px] items-center justify-center py-[104px] relative shrink-0 w-full">
-        <div className=" flex flex-col items-center relative shrink-0">
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[148px] text-white whitespace-nowrap">
+      <div className="bg-primary flex flex-col sm:flex-row gap-6 sm:gap-8 md:gap-12 lg:gap-16 items-center justify-center py-12 sm:py-16 md:py-20 lg:py-24 px-4 w-full">
+        <div className="flex flex-col items-center text-center">
+          <p className="font-['Inter:Bold',sans-serif] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl text-white whitespace-nowrap">
             25
           </p>
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-white whitespace-nowrap">
-            articles
+          <p className="font-['Inter:Bold',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white whitespace-nowrap">
+            {t(language, "articles")}
           </p>
         </div>
-        <Link to="/articles" className=" flex flex-col h-full items-end justify-center pb-[53.75px] relative rounded-[8.75px] shrink-0">
-          <div className="flex-[1_0_0] mb-[-53.75px] min-h-px min-w-px relative w-[651px]">
+        <Link to="/gallerie" className="flex flex-col items-center sm:items-end justify-center relative w-full sm:w-1/2">
+          <div className="relative w-full max-w-md sm:max-w-none">
             <ImageWithFallback 
-              src="https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=651&h=400&fit=crop"
-              alt="Articles preview"
-              className="w-full h-full object-cover rounded-[8.75px] transition-transform duration-300 group-hover:scale-110"
+              src={latestImage && latestImage.file_path ? 
+                (latestImage.file_path.startsWith('http') || latestImage.file_path.startsWith('/') 
+                  ? latestImage.file_path 
+                  : `/uploads/${latestImage.file_path}`) 
+                : IMAGE_PLACEHOLDER_LARGE_SVG}
+              alt="Latest gallery image"
+              className="w-full max-h-48 sm:max-h-64 md:max-h-80 lg:max-h-96 object-cover rounded-md transition-transform duration-300 hover:scale-105"
             />
           </div>
-          <div
-            className="bg-white  flex gap-[7.363px] h-[53.75px] items-center justify-center mb-[-53.75px] p-[5.259px] relative shrink-0 w-[274px]"
-            data-name="Component 10"
-          >
-            <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[#183542] text-[35.99px] whitespace-nowrap">
+          <div className="bg-white flex gap-2 sm:gap-3 h-12 sm:h-14 items-center justify-center px-3 sm:px-4 py-2 rounded-sm relative -mt-6 sm:-mt-7 md:-mt-8 z-10">
+            <p className="font-['Inter:Regular',sans-serif] font-normal text-primary text-base sm:text-lg md:text-xl lg:text-2xl whitespace-nowrap">
               {t(language, "enSavoirPlus")}
             </p>
-            <div className="h-[43.232px] relative shrink-0 w-[21.616px]" data-name="weui:arrow-filled">
-              <div className="absolute inset-[23.5%_12.92%_23.47%_25.72%]" data-name="Vector">
-                <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 13.2647 22.9275">
-                  <path clipRule="evenodd" d={svgPaths.p34a05400} fill="var(--fill-0, #183542)" fillRule="evenodd" id="Vector" />
-                </svg>
-              </div>
+            <div className="h-6 sm:h-7 md:h-8 w-3 sm:w-4 md:w-5 relative flex-shrink-0">
+              <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 13.2647 22.9275">
+                <path clipRule="evenodd" d={svgPaths.p34a05400} fill="var(--color-primary)" fillRule="evenodd" id="Vector" />
+              </svg>
             </div>
           </div>
         </Link>
       </div>
-      <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-[#f3f3f5] border-b border-solid border-t inset-0 pointer-events-none" />
-        <div className="flex flex-col items-center size-full">
-          <div className=" flex flex-col gap-[50px] items-center p-[50px] relative w-full">
-            <div className=" flex flex-col gap-[28px] items-start relative shrink-0 w-full">
-              <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[48px] text-black w-full">
+      <div className="w-full border-t border-b border-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="flex flex-col gap-8 sm:gap-10 md:gap-12 items-center px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
+            <div className="flex flex-col gap-6 sm:gap-7 md:gap-8 items-start w-full">
+              <p className="font-['Inter:Bold',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-black w-full">
                 {t(language, "derniereImageAjoutee")}
               </p>
-              <div className=" flex items-center justify-between relative shrink-0 w-full">
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 w-full">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black">
                   {t(language, "decouvrezDerniereImage")}
                 </p>
-                <div className=" flex gap-[10px] items-center relative shrink-0">
-                  <Link to="/gallerie" className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-black text-center whitespace-nowrap">
+                <div className="flex gap-2 sm:gap-3 items-center hover:opacity-70 transition whitespace-nowrap">
+                  <Link to="/gallerie" className="font-['Inter:Regular',sans-serif] font-normal text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black">
                     {t(language, "voirTout")}
                   </Link>
-                  <div className="relative shrink-0 size-[30px]" data-name="maki:arrow">
-                    <div className="absolute inset-[13.33%_3.33%_13.42%_3.33%]" data-name="Vector">
-                      <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 27.9996 21.975">
-                        <path d={svgPaths.p14b61a80} fill="var(--fill-0, black)" id="Vector" />
-                      </svg>
-                    </div>
+                  <div className="size-6 sm:size-7 md:size-8 lg:size-10 relative flex-shrink-0">
+                    <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 27.9996 21.975">
+                      <path d={svgPaths.p14b61a80} fill="black" id="Vector" />
+                    </svg>
                   </div>
                 </div>
               </div>
             </div>
-            <div className=" flex gap-[80px] items-center justify-center relative shrink-0 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10 w-full justify-items-center">
               {loadingGallery ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-500 col-span-full">
                   {t(language, "chargementImages")}
                 </p>
               ) : errorGallery ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-red-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-red-500 col-span-full">
                   {t(language, "erreurChargementImages")}
                 </p>
               ) : galleryImagesFetched.length === 0 ? (
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-500 col-span-full">
                   {t(language, "aucuneImageTrouvee")}
                 </p>
               ) : (

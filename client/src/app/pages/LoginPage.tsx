@@ -41,44 +41,44 @@ export default function LoginPage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="flex-1 flex items-center justify-center w-full bg-gray-50">
-        <div className="bg-white rounded-[4px] shadow-lg p-[50px] w-[500px]">
-          <h1 className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-primary mb-[40px] text-center">
+      <div className="flex-1 flex items-center justify-center w-full bg-gray-50 px-4 sm:px-6 md:px-8">
+        <div className="bg-white rounded-sm shadow-lg p-6 sm:p-8 md:p-12 w-full max-w-xs sm:max-w-sm md:max-w-md">
+          <h1 className="font-['Inter:Bold',sans-serif] font-bold text-2xl sm:text-3xl md:text-4xl text-primary mb-6 sm:mb-8 md:mb-10 text-center">
             Connexion
           </h1>
-          <form onSubmit={handleLogin} className="flex flex-col gap-[20px]">
-            <div className="flex flex-col gap-[10px]">
-              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-primary">
+          <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5 md:gap-6">
+            <div className="flex flex-col gap-2 sm:gap-2.5 md:gap-3">
+              <label className="font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base md:text-lg text-primary">
                 Nom d'utilisateur
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="border border-primary rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
+                className="border border-primary rounded-sm p-2.5 sm:p-3 md:p-3.5 font-['Inter:Regular',sans-serif] text-sm sm:text-base md:text-base"
                 required
               />
             </div>
-            <div className="flex flex-col gap-[10px]">
-              <label className="font-['Inter:Bold',sans-serif] font-bold text-[16px] text-primary">
+            <div className="flex flex-col gap-2 sm:gap-2.5 md:gap-3">
+              <label className="font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base md:text-lg text-primary">
                 Mot de passe
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border border-primary rounded-[4px] p-[10px] font-['Inter:Regular',sans-serif] text-[16px]"
+                className="border border-primary rounded-sm p-2.5 sm:p-3 md:p-3.5 font-['Inter:Regular',sans-serif] text-sm sm:text-base md:text-base"
                 required
               />
             </div>
             {error && (
-              <div className="bg-error-accent text-white p-[10px] rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px]">
+              <div className="bg-error-accent text-white p-2.5 sm:p-3 md:p-4 rounded-sm font-['Inter:Regular',sans-serif] text-xs sm:text-sm md:text-base">
                 {error}
               </div>
             )}
             <button
               type="submit"
-              className="bg-primary text-white font-['Inter:Bold',sans-serif] font-bold text-[16px] p-[15px] rounded-[4px] hover:bg-primary-dark transition"
+              className="bg-primary text-white font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base md:text-lg p-3 sm:p-4 md:p-4 rounded-sm hover:bg-primary-dark transition"
             >
               Se connecter
             </button>

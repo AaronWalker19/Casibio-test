@@ -206,10 +206,23 @@ router.get("/files/all", requireDB, async (req, res) => {
   try {
     const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at, project_id FROM project_files ORDER BY created_at DESC");
     const rows = await stmt.all();
-    const filesWithUrls = rows.map(row => ({
-      ...row,
-      file_path: getFileUrl(row.file_path)
-    }));
+    console.log("📁 Fichiers récupérés de la DB:", JSON.stringify(rows.slice(0, 3), null, 2));
+    
+    const filesWithUrls = rows.map(row => {
+      const url = getFileUrl(row.file_path);
+      const fileName = path.basename(row.file_path || '');
+      const filePath = path.join(uploadsDir, fileName);
+      const fileExists = fs.existsSync(filePath);
+      
+      console.log(`  → file_path: ${row.file_path} => URL: ${url} [Existe: ${fileExists}]`);
+      
+      return {
+        ...row,
+        file_path: url,
+        file_exists: fileExists
+      };
+    }).filter(file => file.file_exists); // Filter out files that don't exist
+    
     res.json(filesWithUrls);
   } catch (err) {
     console.error("Get all files error:", err);

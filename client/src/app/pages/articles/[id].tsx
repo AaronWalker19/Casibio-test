@@ -134,8 +134,8 @@ export default function ArticlePage() {
     return (
       <div className="bg-white content-stretch flex flex-col items-center relative size-full">
         <Navigation />
-        <div className="flex flex-col items-center justify-center size-full py-[50px]">
-          <p className="font-['Inter:Bold',sans-serif] font-bold text-[32px] text-black">
+        <div className="flex flex-col items-center justify-center size-full py-12 sm:py-16 md:py-20">
+          <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black">
             {t(language, "chargement")}
           </p>
         </div>
@@ -148,11 +148,11 @@ export default function ArticlePage() {
     return (
       <div className="bg-white content-stretch flex flex-col items-center relative size-full">
         <Navigation />
-        <div className="flex flex-col items-center justify-center size-full py-[50px]">
-          <p className="font-['Inter:Bold',sans-serif] font-bold text-[32px] text-black">
+        <div className="flex flex-col items-center justify-center size-full py-12 sm:py-16 md:py-20">
+          <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black">
             {t(language, "articleNonTrouve")}
           </p>
-          {error && <p className="text-red-600 mt-[10px]">{error}</p>}
+          {error && <p className="text-red-600 mt-3 sm:mt-4 text-sm sm:text-base">{error}</p>}
         </div>
         <Footer />
       </div>
@@ -171,29 +171,29 @@ export default function ArticlePage() {
       <Navigation />
       
       {/* Header */}
-      <div className="bg-primary content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
-        <div className="flex gap-[15px] items-center">
-          <div className="bg-error-accent px-[12px] py-[6px] rounded-[4px]">
-            <p className="font-['Inter:Bold',sans-serif] font-bold text-[14px] text-white">
+      <div className="bg-primary content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
+        <div className="flex gap-2 sm:gap-3 md:gap-4 items-center">
+          <div className="bg-error-accent px-2 sm:px-3 py-1 sm:py-1.5 md:py-2 rounded-sm">
+            <p className="font-['Inter:Bold',sans-serif] font-bold text-xs sm:text-sm md:text-base text-white">
               {article.code_anr}
             </p>
           </div>
         </div>
-        <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] w-[50rem] not-italic relative shrink-0 text-[48px] text-white w-full">
+        <p className="font-['Inter:Bold',sans-serif] font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white w-full">
           {language === 'FR' ? article.title_fr : article.title_en}
         </p>
-        <Link to="/articles" className="content-stretch flex gap-[10px] items-center relative shrink-0">
-          <div className="relative shrink-0 size-[30px]" data-name="tabler:books">
+        <Link to="/articles" className="content-stretch flex gap-2 sm:gap-3 items-center">
+          <div className="relative size-6 sm:size-7 md:size-8">
             <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
               <g>
                 <path d="M6.25 5.625V24.375M6.25 5.625C6.25 5.625 8.75 3.75 12.5 3.75C16.25 3.75 18.75 5.625 18.75 5.625M6.25 5.625C6.25 5.625 3.75 3.75 0 3.75V24.375C3.75 24.375 6.25 26.25 6.25 26.25M18.75 5.625V24.375M18.75 5.625C18.75 5.625 21.25 3.75 25 3.75C28.75 3.75 30 5.625 30 5.625V24.375C30 24.375 28.75 22.5 25 22.5C21.25 22.5 18.75 24.375 18.75 24.375M18.75 24.375C18.75 24.375 16.25 22.5 12.5 22.5C8.75 22.5 6.25 24.375 6.25 24.375" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
               </g>
             </svg>
           </div>
-          <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-white whitespace-nowrap">
+          <p className="font-['Inter:Regular',sans-serif] font-normal text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap">
             {t(language, "articles")}
           </p>
-          <div className="relative shrink-0 size-[30px]" data-name="weui:arrow-filled">
+          <div className="relative size-6 sm:size-7 md:size-8">
             <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
               <path clipRule="evenodd" d="M12.2344 7.73438L18.5156 14.0156C18.6719 14.1719 18.75 14.375 18.75 14.625C18.75 14.875 18.6719 15.0781 18.5156 15.2344L12.2344 21.5156C11.9219 21.8281 11.4531 21.8281 11.1406 21.5156C10.8281 21.2031 10.8281 20.7344 11.1406 20.4219L16.9375 14.625L11.1406 8.82812C10.8281 8.51562 10.8281 8.04688 11.1406 7.73438C11.4531 7.42188 11.9219 7.42188 12.2344 7.73438Z" fill="white" fillRule="evenodd" />
             </svg>
@@ -202,18 +202,18 @@ export default function ArticlePage() {
       </div>
 
       {/* Image et infos */}
-      <div className="bg-white content-stretch flex flex-col items-center gap-[20px] px-[50px] py-[30px] relative shrink-0 w-full border-b border-gray-50">
-        <div className="h-[300px] w-full rounded-[4px] overflow-hidden">
+      <div className="bg-white content-stretch flex flex-col items-center gap-4 sm:gap-5 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 w-full border-b border-gray-50">
+        <div className="h-40 sm:h-56 md:h-64 lg:h-80 w-full rounded-sm overflow-hidden">
           <ImageWithFallback 
             src={projectFiles.length > 0 && projectFiles[0].file_path ? projectFiles[0].file_path : "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"} 
             alt={article.title_fr} 
             className="w-full h-full object-cover" 
           />
         </div>
-        <div className="flex gap-[20px] items-start w-full">
-          <div className="flex gap-[10px] items-center">
-            <div className="bg-error content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0">
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
+        <div className="flex gap-3 sm:gap-4 md:gap-5 items-start w-full">
+          <div className="flex gap-2 sm:gap-2.5 items-center">
+            <div className="bg-error content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm">
+              <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
                 {new Date(article.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -221,10 +221,10 @@ export default function ArticlePage() {
                 })}
               </p>
             </div>
-            <div className={`content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 ${
+            <div className={`content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm ${
               article.status === t(language, "complet") ? "bg-success" : "bg-warning"
             }`}>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white whitespace-nowrap">
+              <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
                 {article.status}
               </p>
             </div>
@@ -233,22 +233,22 @@ export default function ArticlePage() {
       </div>
 
       {/* Contenu */}
-      <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-gray-50 border-b border-solid inset-0 pointer-events-none" />
+      <div className="relative w-full">
+        <div aria-hidden="true" className="absolute border-gray-50 border-b inset-0 pointer-events-none" />
         <div className="flex flex-col items-center size-full">
-          <div className="content-stretch flex gap-[50px] items-start p-[50px] relative w-full">
+          <div className="content-stretch flex flex-col lg:flex-row gap-8 sm:gap-10 md:gap-12 lg:gap-16 items-start p-4 sm:p-6 md:p-8 lg:p-12 relative w-full">
             {/* Contenu principal */}
-            <div className="flex-1 content-stretch flex flex-col gap-[40px] items-start relative">
+            <div className="flex-1 content-stretch flex flex-col gap-6 sm:gap-8 md:gap-10 items-start relative">
               {sections.map((section) => (
                 <div
                   key={section.id}
                   id={section.id}
-                  className={`content-stretch flex flex-col gap-[20px] items-start relative shrink-0 w-full scroll-mt-[100px]`}
+                  className={`content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full scroll-mt-[100px] sm:scroll-mt-[120px] md:scroll-mt-[140px]`}
                 >
-                  <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[40px] text-black w-full">
+                  <p className="font-['Inter:Bold',sans-serif] font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
                     {section.title}
                   </p>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[24px] not-italic relative shrink-0 text-[16px] text-black text-justify w-full">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-6 sm:leading-7 text-sm sm:text-base md:text-base text-black text-justify w-full">
                     {section.content}
                   </p>
                 </div>
@@ -256,13 +256,13 @@ export default function ArticlePage() {
             </div>
 
             {/* Sidebar */}
-            <div className="content-stretch flex flex-col gap-[20px] items-start relative shrink-0 w-[400px] sticky top-[50px]">
+            <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full lg:w-80 lg:sticky lg:top-20">
               {/* Sommaire */}
-              <div className="bg-gray-50 content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full ">
-                <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[24px] text-black w-full">
+              <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
+                <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                   {t(language, "sommaire")}
                 </p>
-                <div className="content-stretch flex flex-col gap-[5px] items-start relative shrink-0 w-full">
+                <div className="content-stretch flex flex-col gap-1 sm:gap-1.5 items-start w-full">
                   {sections.map((section) => (
                     <button
                       key={section.id}
@@ -271,7 +271,7 @@ export default function ArticlePage() {
                         const element = document.getElementById(section.id);
                         element?.scrollIntoView({ behavior: "smooth" });
                       }}
-                      className={`font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] w-full text-left p-[8px] rounded-[4px] transition-colors ${
+                      className={`font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base w-full text-left p-2 sm:p-2.5 md:p-3 rounded-sm transition-colors ${
                         activeSection === section.id
                           ? "bg-error-accent text-white"
                           : "text-black hover:bg-gray-200"
@@ -284,11 +284,11 @@ export default function ArticlePage() {
               </div>
 
               {/* Galerie d'images */}
-              <div className="bg-gray-50 content-stretch flex flex-col gap-[10px] items-start p-[20px] relative rounded-[4px] shrink-0 w-full">
-                <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[24px] text-black w-full">
+              <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
+                <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                   {t(language, "galerie")}
                 </p>
-                <div className="grid grid-cols-4 gap-[8px] w-full">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full">
                   {projectFiles.slice(0, 8).map((image, index) => (
                     <button
                       key={image.id}
@@ -296,7 +296,7 @@ export default function ArticlePage() {
                         setSelectedImageIndex(index);
                         setLightboxOpen(true);
                       }}
-                      className="aspect-square rounded-[4px] overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                      className="aspect-square rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                     >
                       <ImageWithFallback
                         src={image.file_path}
@@ -308,14 +308,14 @@ export default function ArticlePage() {
                   {projectFiles.length > 8 && !showFullGallery && (
                     <button
                       onClick={() => setShowFullGallery(true)}
-                      className="aspect-square rounded-[4px] bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
+                      className="aspect-square rounded-sm bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
                     >
-                      <span className="text-white text-[32px] font-bold">+</span>
+                      <span className="text-white text-lg sm:text-2xl md:text-3xl font-bold">+</span>
                     </button>
                   )}
                 </div>
                 {showFullGallery && projectFiles.length > 8 && (
-                  <div className="grid grid-cols-4 gap-[8px] w-full mt-[10px]">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full mt-2 sm:mt-3 md:mt-4">
                     {projectFiles.slice(8).map((image, index) => (
                       <button
                         key={image.id}
@@ -323,7 +323,7 @@ export default function ArticlePage() {
                           setSelectedImageIndex(index + 8);
                           setLightboxOpen(true);
                         }}
-                        className="aspect-square rounded-[4px] overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                        className="aspect-square rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                       >
                         <ImageWithFallback
                           src={image.file_path}
@@ -342,28 +342,28 @@ export default function ArticlePage() {
 
       {/* Fichiers téléchargeables */}
       {projectFiles.filter(f => f.file_type?.toLowerCase().includes('pdf') || f.file_type?.toLowerCase().includes('doc')).length > 0 && (
-        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-gray-50">
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[40px] text-black w-full">
+        <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 relative shrink-0 w-full border-b border-gray-50">
+          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
             {t(language, "fichierLie")}
           </p>
-          <div className="grid grid-cols-3 gap-[20px] w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 w-full">
             {projectFiles.filter(f => f.file_type?.toLowerCase().includes('pdf') || f.file_type?.toLowerCase().includes('doc')).map((file) => (
               <a
                 key={file.id}
                 href={file.file_path}
                 download
-                className="bg-gray-50 content-stretch flex gap-[15px] items-center p-[20px] relative rounded-[4px] shrink-0 hover:bg-gray-300 transition-colors"
+                className="bg-gray-50 content-stretch flex gap-3 sm:gap-4 md:gap-5 items-center p-4 sm:p-5 md:p-6 relative rounded-sm shrink-0 hover:bg-gray-300 transition-colors"
               >
-                <div className="relative shrink-0 size-[60px] bg-primary rounded-[4px] flex items-center justify-center">
-                  <svg className="block size-[30px]" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="relative shrink-0 size-12 sm:size-14 md:size-16 bg-primary rounded-sm flex items-center justify-center">
+                  <svg className="block size-6 sm:size-7 md:size-8" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5h4V9h2v3h4l-5 5z" fill="white" />
                   </svg>
                 </div>
-                <div className="flex flex-col gap-[5px]">
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-black">
+                <div className="flex flex-col gap-1 sm:gap-1.5">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-black">
                     {file.file_display_name}
                   </p>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-gray-600">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs text-gray-600">
                     date: {new Date(file.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US')}
                   </p>
                 </div>
@@ -378,11 +378,11 @@ export default function ArticlePage() {
 
       {/* Image et vidéos lier a l'article */}
       {projectFiles.length > 0 && (
-        <div className="content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full border-b border-gray-50">
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[40px] text-black w-full">
+        <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 relative shrink-0 w-full border-b border-gray-50">
+          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
             {t(language, "imageEtVideos")}
           </p>
-          <div className="grid grid-cols-3 gap-[20px] w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 w-full">
             {projectFiles.slice(0, 8).map((item, index) => (
               <GalleryCard
                 key={item.id}
@@ -400,14 +400,14 @@ export default function ArticlePage() {
             {projectFiles.length > 8 && !showFullMedia && (
               <button
                 onClick={() => setShowFullMedia(true)}
-                className="aspect-square rounded-[4px] bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors h-[200px] w-full"
+                className="aspect-square rounded-sm bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors h-40 sm:h-56 md:h-64 w-full"
               >
-                <span className="text-white text-[32px] font-bold">+</span>
+                <span className="text-white text-lg sm:text-2xl md:text-3xl font-bold">+</span>
               </button>
             )}
           </div>
           {showFullMedia && projectFiles.length > 8 && (
-            <div className="grid grid-cols-3 gap-[20px] w-full mt-[10px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 w-full mt-4 sm:mt-6 md:mt-8">
               {projectFiles.slice(8).map((item, index) => (
                 <GalleryCard
                   key={item.id}

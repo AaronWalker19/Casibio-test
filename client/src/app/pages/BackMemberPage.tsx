@@ -49,22 +49,22 @@ export default function BackMemberPage() {
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="relative shrink-0 w-full bg-gray-50">
+      <div className="relative w-full bg-gray-50">
         <div className="flex flex-col items-center size-full">
           <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
-            <div className="content-stretch flex gap-[40px] items-start relative shrink-0 w-full">
-              <Link to="/backoffice/articles" className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[48px] text-black whitespace-nowrap">
+            <div className="content-stretch flex gap-[40px] items-start w-full">
+              <Link to="/backoffice/articles" className="font-['Inter:Regular',sans-serif] font-normal text-[48px] text-black whitespace-nowrap">
                 Articles
               </Link>
-              <button className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
+              <button className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
                 Membres
               </button>
             </div>
-            <div className="bg-white content-stretch flex flex-col gap-[20px] p-[30px] relative rounded-[8px] shadow-lg shrink-0 w-full">
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[24px] text-black w-full">
+            <div className="bg-white content-stretch flex flex-col gap-[20px] p-[30px] relative rounded-[8px] shadow-lg w-full">
+              <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-black w-full">
                 Ajouter un utilisateur
               </p>
-              <form onSubmit={handleAddUser} className="content-stretch flex gap-[15px] items-end relative shrink-0 w-full">
+              <form onSubmit={handleAddUser} className="content-stretch flex gap-[15px] items-end w-full">
                 <div className="content-stretch flex flex-col flex-1 gap-[5px] items-start relative">
                   <input
                     type="text"
@@ -94,35 +94,35 @@ export default function BackMemberPage() {
                 </div>
                 <button
                   type="submit"
-                  className="bg-primary content-stretch flex items-center justify-center px-[40px] py-[12px] relative rounded-[4px] shrink-0"
+                  className="bg-primary content-stretch flex items-center justify-center px-[40px] py-[12px] rounded-[4px]"
                 >
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
                     Ajouter
                   </p>
                 </button>
               </form>
             </div>
-            <div className="bg-white content-stretch flex flex-col relative rounded-[8px] shadow-lg shrink-0 w-full overflow-hidden">
+            <div className="bg-white content-stretch flex flex-col rounded-[8px] shadow-lg w-full overflow-hidden">
               <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[20px] text-black">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Utilisateur
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[20px] text-black">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Email
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[20px] text-black">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Rôle
                 </p>
-                <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[20px] text-black">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Actions
                 </p>
               </div>
               {users.map((user) => (
                 <div key={user.id} className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-black">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black">
                     {user.username}
                   </p>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[16px] text-black">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black">
                     {user.email}
                   </p>
                   <select
@@ -141,9 +141,9 @@ export default function BackMemberPage() {
                   </select>
                   <button
                     onClick={() => handleDeleteUser(user.id)}
-                    className="bg-error content-stretch flex items-center justify-center px-[15px] py-[8px] relative rounded-[4px] shrink-0 hover:bg-error-dark transition-colors"
+                    className="bg-error content-stretch flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-error-dark transition-colors"
                   >
-                    <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-white whitespace-nowrap">
+                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
                       Supprimer
                     </p>
                   </button>

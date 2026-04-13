@@ -68,31 +68,31 @@ export default function GalleriePage() {
   });
 
   return (
-    <div className="bg-white content-stretch flex flex-col items-center relative size-full">
+    <div className="bg-white flex flex-col items-center relative size-full">
       <Navigation />
-      <div className="bg-primary content-stretch flex flex-col gap-[20px] items-start px-[50px] py-[50px] relative shrink-0 w-full">
-        <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[96px] text-error-accent w-full">
+      <div className="bg-primary flex flex-col gap-3 sm:gap-4 md:gap-5 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
+        <p className="font-['Inter:Bold',sans-serif] font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-error-accent w-full break-words">
           {t(language, "gallerie")}
         </p>
-        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[32px] text-white w-full">
+        <p className="font-['Inter:Regular',sans-serif] font-normal text-lg sm:text-2xl md:text-3xl lg:text-4xl text-white w-full">
           {t(language, "parcourezPhotos")}
         </p>
       </div>
       <div className="relative shrink-0 w-full">
-        <div aria-hidden="true" className="absolute border-gray-50 border-b border-solid inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="absolute border-gray-50 border-b inset-0 pointer-events-none" />
         <div className="flex flex-col items-center size-full">
-          <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full">
-            <div className="content-stretch flex items-center justify-end gap-[20px] relative shrink-0 w-full">
+          <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 items-center px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 relative w-full">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 sm:gap-4 md:gap-5 relative shrink-0 w-full">
               {/* Barre de recherche */}
-              <div className="relative flex items-center h-[40px]">
+              <div className="relative flex items-center h-9 sm:h-10 md:h-11 w-full sm:w-auto">
                 <input
                   type="text"
                   placeholder={t(language, "rechercher")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="p-[10px] pl-[40px] rounded-[4px] border border-black w-[200px] font-['Inter:Regular',sans-serif] h-full"
+                  className="px-3 sm:px-4 pl-9 sm:pl-10 md:pl-11 py-2 sm:py-2.5 md:py-3 rounded-sm border border-black w-full sm:w-40 md:w-48 lg:w-56 font-['Inter:Regular',sans-serif] h-full text-sm md:text-base"
                 />
-                <div className="absolute left-[10px] top-1/2 transform -translate-y-1/2 shrink-0 size-[18px]">
+                <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 size-4 sm:size-5 md:size-5 flex-shrink-0">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 23.4526 23.4526">
                     <path d="M19.6914 20.9531L13.168 14.4297C12.6758 14.8438 12.1152 15.168 11.4863 15.4023C10.8574 15.6367 10.1895 15.7539 9.48242 15.7539C7.72852 15.7539 6.22852 15.1582 5.04102 13.9668C3.84375 12.7852 3.24023 11.2852 3.24023 9.53125C3.24023 7.77734 3.8418 6.27734 5.04102 5.08594C6.23047 3.88477 7.73047 3.28516 9.48242 3.28516C11.2441 3.28516 12.7441 3.88477 13.9355 5.08594C15.1367 6.27734 15.7363 7.77734 15.7363 9.53125C15.7363 10.2383 15.6191 10.9062 15.3848 11.5352C15.1504 12.1641 14.8262 12.7305 14.4121 13.2227L20.9551 19.7656L19.6914 20.9531ZM9.48242 14.0039C10.7461 14.0039 11.8184 13.5527 12.6895 12.6621C13.5703 11.7617 14.0156 10.6895 14.0156 9.42578C14.0156 8.16211 13.5703 7.08984 12.6895 6.19922C11.8184 5.29883 10.7461 4.84766 9.48242 4.84766C8.20898 4.84766 7.13086 5.29883 6.25977 6.19922C5.37891 7.08984 4.93359 8.16211 4.93359 9.42578C4.93359 10.6895 5.37891 11.7617 6.25977 12.6621C7.13086 13.5527 8.20898 14.0039 9.48242 14.0039Z" fill="black" />
                   </svg>
@@ -100,17 +100,17 @@ export default function GalleriePage() {
               </div>
 
               {/* Bouton Filtre avec menu déroulant */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <button
                   onClick={() => setShowSortMenu(!showSortMenu)}
-                  className="flex gap-[10px] items-center p-[10px] relative rounded-[4px] shrink-0 h-[40px] border border-black"
+                  className="flex gap-2 sm:gap-3 items-center px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 relative rounded-sm shrink-0 h-9 sm:h-10 md:h-11 border border-black hover:bg-gray-50 transition w-full sm:w-auto"
                 >
-                  <div className="relative shrink-0 size-[20px]" data-name="mi:filter">
+                  <div className="relative size-4 sm:size-5 md:size-5 flex-shrink-0">
                     <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
                       <path d="M4 8H28V10.6667H4V8ZM8 14.6667H24V17.3333H8V14.6667ZM12 21.3333H20V24H12V21.3333Z" fill="black" />
                     </svg>
                   </div>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-black whitespace-nowrap">
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base text-black whitespace-nowrap">
                     {sortBy === "date-asc"
                       ? t(language, "datePlusAncien")
                       : t(language, "datePlusRecent")}
@@ -119,13 +119,13 @@ export default function GalleriePage() {
 
                 {/* Menu déroulant */}
                 {showSortMenu && (
-                  <div className="absolute right-0 mt-[5px] bg-white border border-black rounded-[4px] z-10 shadow-lg">
+                  <div className="absolute right-0 mt-1 sm:mt-2 bg-white border border-black rounded-sm z-10 shadow-lg">
                     <button
                       onClick={() => {
                         setSortBy("date-asc");
                         setShowSortMenu(false);
                       }}
-                      className={`block w-full text-left px-[20px] py-[10px]  ${
+                      className={`block w-full text-left px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base ${
                         sortBy === "date-asc" ? "bg-error-accent text-white hover:bg-error-accent" : "hover:bg-gray-100"
                       }`}
                     >
@@ -136,7 +136,7 @@ export default function GalleriePage() {
                         setSortBy("date-desc");
                         setShowSortMenu(false);
                       }}
-                      className={`block w-full text-left px-[20px] py-[10px]  ${
+                      className={`block w-full text-left px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base ${
                         sortBy === "date-desc" ? "bg-error-accent text-white hover:bg-error-accent" : "hover:bg-gray-100"
                       }`}
                     >
@@ -147,19 +147,19 @@ export default function GalleriePage() {
               </div>
             </div>
             {loadingGallery ? (
-              <div className="col-span-4 text-center py-[50px]">
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
+              <div className="text-center py-12 sm:py-16 md:py-20 w-full">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-gray-500">
                   {t(language, "chargementFichiers")}
                 </p>
               </div>
             ) : errorGallery ? (
-              <div className="col-span-4 text-center py-[50px]">
-                <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-red-500">
+              <div className="text-center py-12 sm:py-16 md:py-20 w-full">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-red-500">
                   {t(language, "erreurChargementFichiers")}
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-[30px] w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 w-full">
                 {sortedImages.length > 0 ? (
                   sortedImages.map((file, index) => (
                     <GalleryCard
@@ -173,8 +173,8 @@ export default function GalleriePage() {
                     />
                   ))
                 ) : (
-                  <div className="col-span-4 text-center py-[50px]">
-                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-gray-500">
+                  <div className="col-span-full text-center py-12 sm:py-16 md:py-20">
+                    <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-gray-500">
                       {t(language, "aucunFichierTrouve")}
                     </p>
                   </div>
