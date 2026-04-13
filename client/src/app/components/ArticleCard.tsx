@@ -16,7 +16,7 @@ export function ArticleCard({ id, title, date, status, description, image }: Art
   return (
     <Link
       to={`/articles/${id}`}
-      className="bg-primary flex flex-col items-center relative rounded-sm  w-full sm:w-72 md:w-80 lg:w-96 hover:opacity-90 transition-opacity cursor-pointer"
+      className="bg-primary flex flex-col items-center relative rounded-sm w-full sm:w-72 md:w-80 lg:w-96 hover:opacity-90 transition-opacity cursor-pointer"
       data-name="article"
     >
       <div className="h-40 sm:h-48 md:h-56 lg:h-64 relative  w-full">

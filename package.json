@@ -7,6 +7,9 @@
     "start": "node server.js",
     "setup-db": "node setup-db.js",
     "create-admin": "node createAdmin.js",
+    "init-db": "node init-database.js",
+    "check-db": "node check-db.js",
+    "quick-start": "node QUICK_START.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test-api": "node test-api.js http://localhost:3000",
     "test-api-prod": "node test-api.js https://casibio.alwaysdata.net"

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
+import { useAuth } from "../../contexts/AuthContext.tsx";
 
 const initialArticles = [
   {
@@ -64,6 +65,7 @@ const initialArticles = [
 ];
 
 export default function MemberArticlesPage() {
+  const { user } = useAuth();
   const [articles, setArticles] = useState(initialArticles);
 
   const handleDeleteArticle = (id: number) => {
@@ -71,22 +73,24 @@ export default function MemberArticlesPage() {
   };
 
   return (
-    <div className="bg-white content-stretch flex flex-col items-center relative size-full">
+    <div className="bg-white flex flex-col items-center relative size-full">
       <Navigation />
       <div className="relative w-full bg-gray-50">
         <div className="flex flex-col items-center size-full">
-          <div className="content-stretch flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
-            <div className="content-stretch flex gap-[40px] items-start w-full">
+          <div className="flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
+            <div className="flex gap-[40px] items-start w-full">
               <button className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
                 Articles
               </button>
-              <Link to="/backoffice/membres" className="font-['Inter:Regular',sans-serif] font-normal text-[48px] text-black whitespace-nowrap">
-                Membres
-              </Link>
+              {user?.role === "admin" && (
+                <Link to="/backoffice/membres" className="font-['Inter:Regular',sans-serif] font-normal text-[48px] text-black whitespace-nowrap">
+                  Membres
+                </Link>
+              )}
             </div>
-            <div className="content-stretch flex items-center justify-between w-full">
-              <div className="content-stretch flex items-center justify-end gap-[20px]">
-                <button className="content-stretch flex gap-[10px] items-center p-[5px] rounded-[4px]">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center justify-end gap-[20px]">
+                <button className="flex gap-[10px] items-center p-[5px] rounded-[4px]">
                   <div aria-hidden="true" className="absolute border border-black inset-0 pointer-events-none rounded-[4px]" />
                   <div className="relative size-[32px]">
                     <div className="absolute inset-[12.5%_14.27%_14.27%_12.5%]" data-name="Vector">
@@ -96,7 +100,7 @@ export default function MemberArticlesPage() {
                     </div>
                   </div>
                 </button>
-                <button className="content-stretch flex gap-[10px] items-center p-[5px] rounded-[4px]">
+                <button className="flex gap-[10px] items-center p-[5px] rounded-[4px]">
                   <div aria-hidden="true" className="absolute border border-black inset-0 pointer-events-none rounded-[4px]" />
                   <div className="relative size-[32px]">
                     <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
@@ -110,7 +114,7 @@ export default function MemberArticlesPage() {
               </div>
               <Link
                 to="/formulaire"
-                className="bg-primary content-stretch flex gap-[10px] items-center justify-center px-[40px] py-[15px] rounded-[4px]"
+                className="bg-primary flex gap-[10px] items-center justify-center px-[40px] py-[15px] rounded-[4px]"
               >
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-white whitespace-nowrap">
                   Ajouter un articles
@@ -124,7 +128,7 @@ export default function MemberArticlesPage() {
             </div>
             <div className="grid grid-cols-3 gap-[40px] w-full">
               {articles.map((article) => (
-                <div key={article.id} className="bg-primary content-stretch flex flex-col items-center pb-[103px] rounded-[4px]">
+                <div key={article.id} className="bg-primary relative flex flex-col items-center pb-[103px] rounded-[4px]">
                   <button
                     onClick={() => handleDeleteArticle(article.id)}
                     className="absolute right-[10px] top-[10px] z-10 bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
@@ -136,14 +140,14 @@ export default function MemberArticlesPage() {
                   <div className="h-[270px] mb-[-103px] w-full">
                     <ImageWithFallback src={article.image} alt={article.title} className="w-full h-full object-cover rounded-t-[4px]" />
                   </div>
-                  <div className="content-stretch flex flex-col gap-[5px] items-end mb-[-103px] px-[10px] w-full">
-                    <div className="content-stretch flex gap-[5px] items-center w-full">
-                      <div className="bg-error content-stretch flex items-center justify-center p-[5px] rounded-[4px]">
+                  <div className="flex flex-col gap-[5px] items-end mb-[-103px] px-[10px] w-full">
+                    <div className="flex gap-[5px] items-center w-full">
+                      <div className="bg-error flex items-center justify-center p-[5px] rounded-[4px]">
                         <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
                           {article.date}
                         </p>
                       </div>
-                      <div className={`content-stretch flex items-center justify-center p-[5px] rounded-[4px] ${
+                      <div className={`flex items-center justify-center p-[5px] rounded-[4px] ${
                         article.status === "Completé" ? "bg-success" : "bg-gold"
                       }`}>
                         <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
@@ -153,7 +157,7 @@ export default function MemberArticlesPage() {
                     </div>
                       <div className="bg-gray-50 rounded-[4px] w-full">
                         <div className="flex flex-col items-center justify-center size-full">
-                          <div className="content-stretch flex flex-col gap-[10px] items-center justify-center leading-[normal] p-[20px] text-primary text-center w-full">
+                          <div className="flex flex-col gap-[10px] items-center justify-center leading-[normal] p-[20px] text-primary text-center w-full">
                             <p className="font-['Inter:Bold',sans-serif] font-bold text-[24px] w-full">
                               {article.title}
                             </p>

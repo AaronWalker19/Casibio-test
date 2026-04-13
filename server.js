@@ -45,21 +45,16 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN || 'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173'
+  'http://127.0.0.1:5173',
+  'https://casibio.alwaysdata.net' // ✅ AJOUT ICI
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS non autorisé'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: true, // 🔥 accepte automatiquement l'origine
+  credentials: true
 }));
+
+
 
 // ===== SAFE IMPORTS =====
 let initializeAdmin, db;
@@ -101,7 +96,7 @@ try {
 // ===== HEALTH CHECK =====
 app.get("/api/health", async (req, res) => {
   try {
-    const dbPool = db && db.pool ? db.pool() : null;
+    const dbPool = db && typeof db.pool === 'function' ? db.pool() : null;
     
     let dbStatus = "❌ Not initialized";
     let dbInfo = {};
@@ -154,13 +149,14 @@ app.get("/api/health", async (req, res) => {
 // ===== ADMIN INIT - Créer les tables manuellement =====
 app.post("/api/admin/init-db", async (req, res) => {
   try {
-    if (!db || !db.pool) {
+    const dbPool = db && typeof db.pool === 'function' ? db.pool() : null;
+    if (!dbPool) {
       return res.status(503).json({ 
         error: "Base de données non disponible"
       });
     }
     
-    const connection = await db.pool().getConnection();
+    const connection = await dbPool.getConnection();
     
     try {
       // Création des tables
@@ -216,7 +212,7 @@ app.post("/api/admin/init-db", async (req, res) => {
         
         // Créer l'admin par défaut s'il n'existe pas
         `INSERT IGNORE INTO users (username, email, password_hash, role)
-         SELECT 'admin', 'admin@test.com', '$2a$10$8Y9.h8aMW9JqCdS.H8v5CON5HhTqGVBhGME8rI/7E.JZBjG7k7z3e', 'admin'
+         SELECT 'admin', 'admin@test.com', '$2b$10$F5jUIiF.//fldrNMeVopc.2LenUyr8xkvq7UMm5eqGfmHQ5AOUIAe', 'admin'
          WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin')`
       ];
       

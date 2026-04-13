@@ -83,6 +83,15 @@ router.post("/login",
     const { username, password } = req.body;
 
     try {
+      // Vérifier que le pool est initialisé
+      const dbPool = db && typeof db.pool === 'function' ? db.pool() : null;
+      if (!dbPool) {
+        console.error("❌ DB Pool not initialized on login attempt");
+        return res.status(503).json({ 
+          error: "Service indisponible - base de données non connectée" 
+        });
+      }
+
       const stmt = db.prepare("SELECT * FROM users WHERE username = ?");
       const user = await stmt.get(username);
 
@@ -106,8 +115,26 @@ router.post("/login",
         user: { id: user.id, username: user.username, email: user.email, role: user.role }
       });
     } catch (err) {
-      console.error("Login error:", err);
-      return res.status(500).json({ error: "Erreur lors de la connexion" });
+      console.error("❌ Login error:", {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        code: err.code
+      });
+      
+      // Erreur spécifique pour MySQL
+      if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ER_ACCESS_DENIED_ERROR') {
+        return res.status(503).json({ 
+          error: "Erreur de connexion à la base de données"
+        });
+      }
+      
+      // Ne pas exposer les détails d'erreur en production
+      const isDevMode = process.env.NODE_ENV === "development";
+      return res.status(500).json({ 
+        error: "Erreur lors de la connexion",
+        ...(isDevMode && { details: err.message })
+      });
     }
   }
 );
