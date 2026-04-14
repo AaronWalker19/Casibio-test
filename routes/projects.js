@@ -6,6 +6,11 @@ const fs = require("fs");
 const { check, validationResult } = require("express-validator");
 let db;
 
+// ✅ Helper: Convertir les strings vides en null
+const cleanParam = (value) => {
+  return value && typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
 // SÉCURITÉ: Validateur de chemin de fichier
 const validateFilePath = (filePath, baseDir) => {
   const resolvedPath = path.resolve(baseDir, filePath);
@@ -100,8 +105,14 @@ router.post("/",
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 5000 }).optional(),
-    check('summary_en').trim().isLength({ max: 5000 }).optional(),
+    check('summary_fr').trim().isLength({ max: 5000 }).notEmpty(),
+    check('summary_en').trim().isLength({ max: 5000 }).notEmpty(),
+    check('methods_fr').trim().optional(),
+    check('methods_en').trim().optional(),
+    check('results_fr').trim().optional(),
+    check('results_en').trim().optional(),
+    check('perspectives_fr').trim().optional(),
+    check('perspectives_en').trim().optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -114,18 +125,37 @@ router.post("/",
       title_fr,
       title_en,
       summary_fr,
-      summary_en
+      summary_en,
+      methods_fr,
+      methods_en,
+      results_fr,
+      results_en,
+      perspectives_fr,
+      perspectives_en
     } = req.body;
 
     try {
     const sql = `
       INSERT INTO projects
-      (code_anr, title_fr, title_en, summary_fr, summary_en, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      (code_anr, title_fr, title_en, summary_fr, summary_en, methods_fr, methods_en, results_fr, results_en, perspectives_fr, perspectives_en, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const stmt = db.prepare(sql);
-    const result = await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.user.userId);
+    const result = await stmt.run(
+      cleanParam(code_anr),
+      cleanParam(title_fr),
+      cleanParam(title_en),
+      cleanParam(summary_fr),
+      cleanParam(summary_en),
+      cleanParam(methods_fr),
+      cleanParam(methods_en),
+      cleanParam(results_fr),
+      cleanParam(results_en),
+      cleanParam(perspectives_fr),
+      cleanParam(perspectives_en),
+      req.user.userId
+    );
     const projectId = result.lastInsertRowid;
 
     // Save files to uploads directory and insert paths into database
@@ -414,8 +444,14 @@ router.put("/:projectId",
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 5000 }).optional(),
-    check('summary_en').trim().isLength({ max: 5000 }).optional(),
+    check('summary_fr').trim().isLength({ max: 5000 }).notEmpty(),
+    check('summary_en').trim().isLength({ max: 5000 }).notEmpty(),
+    check('methods_fr').trim().optional(),
+    check('methods_en').trim().optional(),
+    check('results_fr').trim().optional(),
+    check('results_en').trim().optional(),
+    check('perspectives_fr').trim().optional(),
+    check('perspectives_en').trim().optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -423,17 +459,44 @@ router.put("/:projectId",
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { code_anr, title_fr, title_en, summary_fr, summary_en } = req.body;
+    const { 
+      code_anr, 
+      title_fr, 
+      title_en, 
+      summary_fr, 
+      summary_en,
+      methods_fr,
+      methods_en,
+      results_fr,
+      results_en,
+      perspectives_fr,
+      perspectives_en
+    } = req.body;
     
     try {
       const sql = `
         UPDATE projects 
-        SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, updated_at = CURRENT_TIMESTAMP
+        SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, 
+            methods_fr = ?, methods_en = ?, results_fr = ?, results_en = ?, 
+            perspectives_fr = ?, perspectives_en = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
 
       const stmt = db.prepare(sql);
-      await stmt.run(code_anr, title_fr, title_en, summary_fr, summary_en, req.params.projectId);
+      await stmt.run(
+        cleanParam(code_anr),
+        cleanParam(title_fr),
+        cleanParam(title_en),
+        cleanParam(summary_fr),
+        cleanParam(summary_en),
+        cleanParam(methods_fr),
+        cleanParam(methods_en),
+        cleanParam(results_fr),
+        cleanParam(results_en),
+        cleanParam(perspectives_fr),
+        cleanParam(perspectives_en),
+        req.params.projectId
+      );
       res.json({ message: "Projet modifié avec succès" });
     } catch (err) {
       console.error("Update project error:", err);

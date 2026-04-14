@@ -4,7 +4,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null;
   login: (credentials: any) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -16,44 +16,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in by checking localStorage or making API call
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // Verify token with backend
-      fetch('/api/auth/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    // Vérifier l'authentification au chargement
+    // Le cookie sera envoyé automatiquement par le navigateur
+    const verifyAuth = async () => {
+      try {
+        // Essayer d'abord la route /verify
+        let response = await fetch('/api/auth/verify', {
+          credentials: 'include',
+        });
+        
+        // Si 404, essayer /me comme fallback
+        if (response.status === 404) {
+          response = await fetch('/api/auth/me', {
+            credentials: 'include',
+          });
         }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.valid) {
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // /verify renvoie { valid, user }, /me renvoie { user }
+          if (data.valid !== undefined) {
+            // Route /verify
+            if (data.valid) {
+              setIsAuthenticated(true);
+              setUser(data.user);
+            } else {
+              localStorage.removeItem('authToken');
+              setIsAuthenticated(false);
+            }
+          } else if (data.user) {
+            // Route /me
             setIsAuthenticated(true);
             setUser(data.user);
           } else {
-            localStorage.removeItem('authToken');
+            setIsAuthenticated(false);
           }
-        })
-        .catch(() => localStorage.removeItem('authToken'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+        } else {
+          localStorage.removeItem('authToken');
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        console.error("Erreur vérification auth:", err);
+        localStorage.removeItem('authToken');
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyAuth();
   }, []);
 
   const login = (data: any) => {
-    // Update auth state with already authenticated data from LoginModal
+    // Mettre à jour l'état avec les données de l'authentification
     if (data.token) {
+      // Garder le token en localStorage comme fallback
       localStorage.setItem('authToken', data.token);
       setIsAuthenticated(true);
       setUser(data.user);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    setIsAuthenticated(false);
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Appeler la route logout pour effacer le cookie et la session
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error("Erreur logout:", err);
+    } finally {
+      localStorage.removeItem('authToken');
+      setIsAuthenticated(false);
+      setUser(null);
+    }
   };
 
   return (

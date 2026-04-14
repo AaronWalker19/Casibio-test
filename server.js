@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const app = express();
@@ -69,6 +70,7 @@ try {
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(cookieParser()); // ✅ Permet de lire les cookies
 
 // SÉCURITÉ: Rate limiting global
 const { apiLimiter } = require("./middleware/security");

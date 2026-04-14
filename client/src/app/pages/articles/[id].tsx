@@ -172,13 +172,6 @@ export default function ArticlePage() {
       
       {/* Header */}
       <div className="bg-primary content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
-        <div className="flex gap-2 sm:gap-3 md:gap-4 items-center">
-          <div className="bg-error-accent px-2 sm:px-3 py-1 sm:py-1.5 md:py-2 rounded-sm">
-            <p className="font-['Inter:Bold',sans-serif] font-bold text-xs sm:text-sm md:text-base text-white">
-              {article.code_anr}
-            </p>
-          </div>
-        </div>
         <p className="font-['Inter:Bold',sans-serif] font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white w-full">
           {language === 'FR' ? article.title_fr : article.title_en}
         </p>

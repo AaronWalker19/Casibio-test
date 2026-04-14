@@ -1,75 +1,102 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 
-const initialArticles = [
-  {
-    id: 1,
-    title: "Polymer ajouter au contour de céramique",
-    date: "date: 17 Mars 2026",
-    status: "Privee",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop",
-  },
-  {
-    id: 2,
-    title: "Polymer ajouter au contour de céramique",
-    date: "dim: 17 Mars 2026",
-    status: "Completé",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1707863080643-2a7dc1f8486f?w=400&h=300&fit=crop",
-  },
-  {
-    id: 3,
-    title: "Polymer ajouter au contour de céramique",
-    date: "date: 17 Mars 2026",
-    status: "Privee",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1766297247072-93fd815afef3?w=400&h=300&fit=crop",
-  },
-  {
-    id: 4,
-    title: "Polymer ajouter au contour de céramique",
-    date: "dim: 17 Mars 2026",
-    status: "Privee",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1770320742275-2ad1714ab774?w=400&h=300&fit=crop",
-  },
-  {
-    id: 5,
-    title: "Polymer ajouter au contour de céramique",
-    date: "date: 17 Mars 2026",
-    status: "Privee",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1761095596584-34731de3e568?w=400&h=300&fit=crop",
-  },
-  {
-    id: 6,
-    title: "Polymer ajouter au contour de céramique",
-    date: "date: 17 Mars 2026",
-    status: "Completé",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1770320742319-6aa889b3130b?w=400&h=300&fit=crop",
-  },
-  {
-    id: 7,
-    title: "Polymer ajouter au contour de céramique",
-    date: "date: 17 Mars 2026",
-    status: "Completé",
-    description: "Le procédé Polymer Impregnation Pyrolysis (PIP) est sélectionné pour synthétiser ces objets",
-    image: "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop",
-  },
-];
+interface Article {
+  id: number;
+  title_fr: string;
+  title_en: string;
+  summary_fr: string;
+  summary_en: string;
+  created_at: string;
+  code_anr?: string;
+  image?: string;
+}
 
 export default function MemberArticlesPage() {
   const { user } = useAuth();
-  const [articles, setArticles] = useState(initialArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleDeleteArticle = (id: number) => {
-    setArticles(articles.filter((article) => article.id !== id));
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  const fetchArticles = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("/api/projects", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des articles");
+      }
+
+      const data = await response.json();
+      setArticles(data);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement");
+      console.error("Error fetching articles:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteArticle = async (id: number, title: string) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer "${title}" ?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        return;
+      }
+
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la suppression");
+      }
+
+      // Supprimer de la liste locale
+      setArticles(articles.filter((article) => article.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la suppression");
+      console.error("Error deleting article:", err);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
   };
 
   return (
@@ -126,51 +153,73 @@ export default function MemberArticlesPage() {
                 </div>
               </Link>
             </div>
-            <div className="grid grid-cols-3 gap-[40px] w-full">
-              {articles.map((article) => (
-                <div key={article.id} className="bg-primary relative flex flex-col items-center pb-[103px] rounded-[4px]">
-                  <button
-                    onClick={() => handleDeleteArticle(article.id)}
-                    className="absolute right-[10px] top-[10px] z-10 bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
-                  >
-                    <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
-                      <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="white" />
-                    </svg>
-                  </button>
-                  <div className="h-[270px] mb-[-103px] w-full">
-                    <ImageWithFallback src={article.image} alt={article.title} className="w-full h-full object-cover rounded-t-[4px]" />
-                  </div>
-                  <div className="flex flex-col gap-[5px] items-end mb-[-103px] px-[10px] w-full">
-                    <div className="flex gap-[5px] items-center w-full">
-                      <div className="bg-error flex items-center justify-center p-[5px] rounded-[4px]">
-                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
-                          {article.date}
-                        </p>
-                      </div>
-                      <div className={`flex items-center justify-center p-[5px] rounded-[4px] ${
-                        article.status === "Completé" ? "bg-success" : "bg-gold"
-                      }`}>
-                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
-                          {article.status}
-                        </p>
-                      </div>
+            {error && (
+              <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="w-full text-center py-8">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] text-gray-600">
+                  Chargement des articles...
+                </p>
+              </div>
+            ) : articles.length === 0 ? (
+              <div className="w-full text-center py-8">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] text-gray-600">
+                  Aucun article pour le moment. Créez votre premier article !
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-[40px] w-full">
+                {articles.map((article) => (
+                  <div key={article.id} className="bg-primary relative flex flex-col items-center pb-[103px] rounded-[4px]">
+                    <button
+                      onClick={() => handleDeleteArticle(article.id, article.title_fr)}
+                      className="absolute right-[10px] top-[10px] z-10 bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
+                    >
+                      <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+                        <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="white" />
+                      </svg>
+                    </button>
+                    <div className="h-[270px] mb-[-103px] w-full">
+                      <ImageWithFallback 
+                        src={article.image ?? "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"} 
+                        alt={article.title_fr} 
+                        className="w-full h-full object-cover rounded-t-[4px]" 
+                      />
                     </div>
+                    <div className="flex flex-col gap-[5px] items-end mb-[-103px] px-[10px] w-full">
+                      <div className="flex gap-[5px] items-center w-full">
+                        <div className="bg-error flex items-center justify-center p-[5px] rounded-[4px]">
+                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
+                            {formatDate(article.created_at)}
+                          </p>
+                        </div>
+                        <div className="bg-success flex items-center justify-center p-[5px] rounded-[4px]">
+                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
+                            Complété
+                          </p>
+                        </div>
+                      </div>
                       <div className="bg-gray-50 rounded-[4px] w-full">
                         <div className="flex flex-col items-center justify-center size-full">
                           <div className="flex flex-col gap-[10px] items-center justify-center leading-[normal] p-[20px] text-primary text-center w-full">
                             <p className="font-['Inter:Bold',sans-serif] font-bold text-[24px] w-full">
-                              {article.title}
+                              {article.title_fr}
                             </p>
                             <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 text-[14px] w-full">
-                            {article.description}
-                          </p>
+                              {article.summary_fr}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

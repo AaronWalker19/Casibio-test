@@ -109,6 +109,14 @@ router.post("/login",
       // Générer le token
       const token = generateToken(user.id, user.username, user.role);
       
+      // Définir le cookie httpOnly et secure
+      res.cookie('authToken', token, {
+        httpOnly: true,           // ✅ Pas accessible en JS (protection XSS)
+        secure: process.env.NODE_ENV === 'production', // HTTPS seulement en production
+        sameSite: 'strict',       // Protection CSRF
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 jours
+      });
+      
       res.json({
         message: "Connexion réussie",
         token,
@@ -138,6 +146,39 @@ router.post("/login",
     }
   }
 );
+
+// VERIFY TOKEN - GET /api/auth/verify
+router.get("/verify", (req, res) => {
+  const jwt = require("jsonwebtoken");
+  const SECRET_KEY = process.env.JWT_SECRET;
+  
+  // Chercher le token dans le header Authorization ou dans le cookie
+  const authHeader = req.headers["authorization"];
+  const tokenFromHeader = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
+  const tokenFromCookie = req.cookies?.authToken;
+  const token = tokenFromHeader || tokenFromCookie;
+
+  if (!token) {
+    return res.json({ valid: false });
+  }
+
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) {
+      return res.json({ valid: false });
+    }
+    res.json({ valid: true, user });
+  });
+});
+
+// LOGOUT - POST /api/auth/logout
+router.post("/logout", (req, res) => {
+  res.clearCookie('authToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+  res.json({ message: "Déconnexion réussie" });
+});
 
 // GET CURRENT USER - GET /api/auth/me
 router.get("/me", authenticateToken, (req, res) => {

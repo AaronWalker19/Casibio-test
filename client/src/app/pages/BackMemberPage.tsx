@@ -195,13 +195,13 @@ export default function BackMemberPage() {
         <div className="flex flex-col items-center size-full">
           <div className="flex flex-col gap-[40px] items-center p-[50px] relative w-full max-w-[1400px]">
             <div className="flex gap-[40px] items-start w-full">
-              <Link to="/backoffice/articles" className="font-['Inter:Regular',sans-serif] font-normal text-[48px] text-black whitespace-nowrap">
+              <button className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
                 Articles
-              </Link>
+              </button>
               {user?.role === "admin" && (
-                <button className="font-['Inter:Bold',sans-serif] font-bold text-[48px] text-black whitespace-nowrap border-b-[4px] border-black pb-[5px]">
+                <Link to="/backoffice/membres" className="font-['Inter:Regular',sans-serif] font-normal text-[48px] text-black whitespace-nowrap">
                   Membres
-                </button>
+                </Link>
               )}
             </div>
 
@@ -217,59 +217,19 @@ export default function BackMemberPage() {
               </div>
             )}
 
-            <div className="bg-white flex flex-col gap-[20px] p-[30px] relative rounded-[8px] shadow-lg w-full">
-              <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-black w-full">
-                Ajouter un utilisateur
-              </p>
-              <form onSubmit={handleAddUser} className="flex gap-[15px] items-end w-full">
-                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
-                  <input
-                    type="text"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    placeholder="Nom d'utilisateur (min 3 caractères)"
-                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
-                  />
-                </div>
-                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
-                  <input
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    placeholder="Email"
-                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
-                  />
-                </div>
-                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
-                  <input
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    placeholder="Mot de passe (min 8 caractères)"
-                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-primary flex items-center justify-center px-[40px] py-[12px] rounded-[4px] disabled:opacity-50 cursor-pointer hover:bg-opacity-90 transition"
-                >
-                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
-                    {loading ? "Ajout en cours..." : "Ajouter"}
-                  </p>
-                </button>
-              </form>
-            </div>
             <div className="bg-white flex flex-col rounded-[8px] shadow-lg w-full overflow-hidden">
-              <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
+              <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
-                  Utilisateur
+                  Titre (FR)
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
-                  Email
+                  Titre (EN)
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
-                  Rôle
+                  Code ANR
+                </p>
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
+                  Date
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Actions
@@ -278,40 +238,48 @@ export default function BackMemberPage() {
               {loading ? (
                 <div className="p-[20px] text-center">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                    Chargement des utilisateurs...
+                    Chargement des projets...
                   </p>
                 </div>
-              ) : users.length === 0 ? (
+              ) : projects.length === 0 ? (
                 <div className="p-[20px] text-center">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                    Aucun utilisateur trouvé
+                    Aucun projet trouvé
                   </p>
                 </div>
               ) : (
-                users.map((user) => (
-                  <div key={user.id} className="grid grid-cols-[2fr_2fr_1.5fr_1fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
-                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black">
-                      {user.username}
-                    </p>
-                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black">
-                      {user.email}
-                    </p>
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                      className="bg-white border-gray-200 border border-solid p-[8px] rounded-[4px] font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="member">Membre</option>
-                    </select>
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="bg-error flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-error-dark transition-colors"
-                    >
-                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
-                        Supprimer
+                projects.map((project) => (
+                  <div key={project.id} className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
+                    <div className="truncate">
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black truncate">
+                        {project.title_fr}
                       </p>
-                    </button>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black truncate">
+                        {project.title_en}
+                      </p>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-600">
+                        {project.code_anr || "-"}
+                      </p>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-gray-500">
+                        {new Date(project.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    <div className="flex gap-[10px]">
+                      <button
+                        onClick={() => handleDeleteProject(project.id, project.title_fr)}
+                        className="bg-error flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-error-dark transition-colors"
+                      >
+                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
+                          Supprimer
+                        </p>
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

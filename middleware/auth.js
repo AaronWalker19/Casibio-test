@@ -9,10 +9,14 @@ if (!SECRET_KEY) {
   process.exit(1);
 }
 
-// Middleware: Vérifier JWT
+// Middleware: Vérifier JWT (depuis header Authorization ou cookie)
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
+  const tokenFromHeader = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
+  
+  // Chercher le token dans le header Authorization ou dans le cookie
+  const tokenFromCookie = req.cookies?.authToken;
+  const token = tokenFromHeader || tokenFromCookie;
 
   if (!token) {
     return res.status(401).json({ error: "Token manquant" });
