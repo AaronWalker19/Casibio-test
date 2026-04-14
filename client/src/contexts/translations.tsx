@@ -73,6 +73,10 @@ export const translations = {
     planDuSite: "Plan du Site",
     planDuSiteDescription: "Découvrez tous les liens du site",
     formulaire: "Formulaire",
+    modifier: "Modifier",
+    supprimer: "Supprimer",
+    annuler: "Annuler",
+    retourArticles: "Retour aux articles",
   },
   EN: {
     // Navigation
@@ -148,6 +152,10 @@ export const translations = {
     planDuSite: "Site Map",
     planDuSiteDescription: "Discover all the site links",
     formulaire: "Form",
+    modifier: "Edit",
+    supprimer: "Delete",
+    annuler: "Cancel",
+    retourArticles: "Return to articles",
   },
 };
 

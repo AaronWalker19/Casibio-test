@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import { Navigation } from "../../components/Navigation.tsx";
 import { Footer } from "../../components/Footer.tsx";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback.tsx";
 import { GalleryCard } from "../../components/GalleryCard.tsx";
 import { GalleryLightbox } from "../../components/GalleryLightbox.tsx";
 import { useLanguage } from "../../../contexts/LanguageContext.tsx";
+import { useAuth } from "../../../contexts/AuthContext.tsx";
 import { t } from "../../../contexts/translations.tsx";
 
 // Ensure Tailwind CSS variables are available
@@ -65,7 +66,9 @@ const getContent = (content: string | null, language: 'FR' | 'EN'): string => {
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { language } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const [activeSection, setActiveSection] = useState("resume");
   const [showFullGallery, setShowFullGallery] = useState(false);
   const [showFullMedia, setShowFullMedia] = useState(false);
@@ -130,6 +133,45 @@ export default function ArticlePage() {
     }
   }, [id]);
 
+  // Fonction pour modifier l'article
+  const handleEditArticle = () => {
+    if (article) {
+      navigate("/formulaire", { state: { editingArticle: article } });
+    }
+  };
+
+  // Fonction pour supprimer l'article
+  const handleDeleteArticle = async () => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer cet article ?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("Vous n'êtes pas authentifié");
+        return;
+      }
+
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la suppression");
+      }
+
+      navigate("/membres/articles");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur lors de la suppression");
+      console.error("Error deleting article:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white content-stretch flex flex-col items-center relative size-full">
@@ -175,23 +217,25 @@ export default function ArticlePage() {
         <p className="font-['Inter:Bold',sans-serif] font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white w-full">
           {language === 'FR' ? article.title_fr : article.title_en}
         </p>
-        <Link to="/articles" className="content-stretch flex gap-2 sm:gap-3 items-center">
-          <div className="relative size-6 sm:size-7 md:size-8">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
-              <g>
-                <path d="M6.25 5.625V24.375M6.25 5.625C6.25 5.625 8.75 3.75 12.5 3.75C16.25 3.75 18.75 5.625 18.75 5.625M6.25 5.625C6.25 5.625 3.75 3.75 0 3.75V24.375C3.75 24.375 6.25 26.25 6.25 26.25M18.75 5.625V24.375M18.75 5.625C18.75 5.625 21.25 3.75 25 3.75C28.75 3.75 30 5.625 30 5.625V24.375C30 24.375 28.75 22.5 25 22.5C21.25 22.5 18.75 24.375 18.75 24.375M18.75 24.375C18.75 24.375 16.25 22.5 12.5 22.5C8.75 22.5 6.25 24.375 6.25 24.375" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-              </g>
-            </svg>
-          </div>
-          <p className="font-['Inter:Regular',sans-serif] font-normal text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap">
-            {t(language, "articles")}
-          </p>
-          <div className="relative size-6 sm:size-7 md:size-8">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
-              <path clipRule="evenodd" d="M12.2344 7.73438L18.5156 14.0156C18.6719 14.1719 18.75 14.375 18.75 14.625C18.75 14.875 18.6719 15.0781 18.5156 15.2344L12.2344 21.5156C11.9219 21.8281 11.4531 21.8281 11.1406 21.5156C10.8281 21.2031 10.8281 20.7344 11.1406 20.4219L16.9375 14.625L11.1406 8.82812C10.8281 8.51562 10.8281 8.04688 11.1406 7.73438C11.4531 7.42188 11.9219 7.42188 12.2344 7.73438Z" fill="white" fillRule="evenodd" />
-            </svg>
-          </div>
-        </Link>
+        <div className="flex gap-4 sm:gap-5 md:gap-6 items-center w-full">
+          <Link to={isAuthenticated ? "/membres/articles" : "/articles"} className="content-stretch flex gap-2 sm:gap-3 items-center">
+            <div className="relative size-6 sm:size-7 md:size-8">
+              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
+                <g>
+                  <path d="M6.25 5.625V24.375M6.25 5.625C6.25 5.625 8.75 3.75 12.5 3.75C16.25 3.75 18.75 5.625 18.75 5.625M6.25 5.625C6.25 5.625 3.75 3.75 0 3.75V24.375C3.75 24.375 6.25 26.25 6.25 26.25M18.75 5.625V24.375M18.75 5.625C18.75 5.625 21.25 3.75 25 3.75C28.75 3.75 30 5.625 30 5.625V24.375C30 24.375 28.75 22.5 25 22.5C21.25 22.5 18.75 24.375 18.75 24.375M18.75 24.375C18.75 24.375 16.25 22.5 12.5 22.5C8.75 22.5 6.25 24.375 6.25 24.375" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                </g>
+              </svg>
+            </div>
+            <p className="font-['Inter:Regular',sans-serif] font-normal text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap">
+              {t(language, "retourArticles")}
+            </p>
+            <div className="relative size-6 sm:size-7 md:size-8">
+              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 30">
+                <path clipRule="evenodd" d="M12.2344 7.73438L18.5156 14.0156C18.6719 14.1719 18.75 14.375 18.75 14.625C18.75 14.875 18.6719 15.0781 18.5156 15.2344L12.2344 21.5156C11.9219 21.8281 11.4531 21.8281 11.1406 21.5156C10.8281 21.2031 10.8281 20.7344 11.1406 20.4219L16.9375 14.625L11.1406 8.82812C10.8281 8.51562 10.8281 8.04688 11.1406 7.73438C11.4531 7.42188 11.9219 7.42188 12.2344 7.73438Z" fill="white" fillRule="evenodd" />
+              </svg>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* Image et infos */}
@@ -250,6 +294,36 @@ export default function ArticlePage() {
 
             {/* Sidebar */}
             <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full lg:w-80 lg:sticky lg:top-20">
+              {/* Action Buttons for Authenticated Users */}
+              {isAuthenticated && (
+                <div className="flex gap-[8px] w-full">
+                  <button
+                    onClick={handleEditArticle}
+                    className="bg-blue-500 p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-blue-600 transition-colors flex justify-between items-center flex-1"
+                    title="Modifier l'article"
+                  >
+                    <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="white" />
+                      <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" fill="white" />
+                    </svg>
+                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
+                      {t(language, "modifier")}
+                    </p>
+                  </button>
+                  <button
+                    onClick={handleDeleteArticle}
+                    className="bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-[#a01f26] transition-colors flex justify-between items-center flex-1"
+                    title="Supprimer l'article"
+                  >
+                    <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+                      <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="white" />
+                    </svg>
+                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
+                      {t(language, "supprimer")}
+                    </p>
+                  </button>
+                </div>
+              )}
               {/* Sommaire */}
               <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
                 <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">

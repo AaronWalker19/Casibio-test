@@ -3,11 +3,14 @@ import { Link, useNavigate, useLocation } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
+import { useLanguage } from "../../contexts/LanguageContext.tsx";
+import { t } from "../../contexts/translations.tsx";
 
 export default function FormulairePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading } = useAuth();
+  const { language } = useLanguage();
   const [currentStep, setCurrentStep] = useState(1);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
@@ -233,7 +236,7 @@ export default function FormulairePage() {
           className="bg-gray-50 border-2 border-gray-200 content-stretch flex gap-2 sm:gap-3 items-center justify-center px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-sm hover:bg-gray-100"
         >
           <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black whitespace-nowrap">
-            Annuler
+            {t(language, "annuler")}
           </p>
           <div className="relative size-4 sm:size-5 md:size-6">
             <svg className="block size-full" fill="none" viewBox="0 0 24 24">

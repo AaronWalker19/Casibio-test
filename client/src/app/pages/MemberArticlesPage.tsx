@@ -107,6 +107,11 @@ export default function MemberArticlesPage() {
     navigate("/formulaire", { state: { editingArticle: article } });
   };
 
+  const handleViewArticle = (articleId: number) => {
+    // Naviguer vers la page de détail de l'article
+    navigate(`/articles/${articleId}`);
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('fr-FR', {
@@ -366,7 +371,7 @@ export default function MemberArticlesPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="bg-gray-50 rounded-[4px] w-full">
+                      <div className="bg-gray-50 rounded-[4px] w-full cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleViewArticle(article.id)}>
                         <div className="flex flex-col items-center justify-center size-full">
                           <div className="flex flex-col gap-[10px] items-center justify-center leading-[normal] p-[20px] text-primary text-center w-full">
                             <p className="font-['Inter:Bold',sans-serif] font-bold text-[24px] w-full">
