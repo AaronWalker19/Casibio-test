@@ -1,15 +1,17 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 
 export default function FormulairePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editingArticleId, setEditingArticleId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
@@ -22,6 +24,27 @@ export default function FormulairePage() {
     perspectivesFr: "",
     perspectivesEn: "",
   });
+
+  // Véérifier si on est en mode édition et pré-remplir les données
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.editingArticle) {
+      const article = state.editingArticle;
+      setEditingArticleId(article.id);
+      setFormData({
+        titreFr: article.title_fr || "",
+        titreEn: article.title_en || "",
+        resumeFr: article.summary_fr || "",
+        resumeEn: article.summary_en || "",
+        methodsFr: article.methods_fr || "",
+        methodsEn: article.methods_en || "",
+        resultsFr: article.results_fr || "",
+        resultsEn: article.results_en || "",
+        perspectivesFr: article.perspectives_fr || "",
+        perspectivesEn: article.perspectives_en || "",
+      });
+    }
+  }, [location]);
 
   // Afficher un message de chargement pendant la vérification de l'authentification
   if (loading) {
@@ -120,25 +143,32 @@ export default function FormulairePage() {
         return;
       }
 
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        credentials: 'include', // ✅ Envoyer automatiquement les cookies
+      const payload = {
+        title_fr: formData.titreFr,
+        title_en: formData.titreEn,
+        summary_fr: formData.resumeFr,
+        summary_en: formData.resumeEn,
+        methods_fr: formData.methodsFr,
+        methods_en: formData.methodsEn,
+        results_fr: formData.resultsFr,
+        results_en: formData.resultsEn,
+        perspectives_fr: formData.perspectivesFr,
+        perspectives_en: formData.perspectivesEn,
+      };
+
+      // Déterminer si c'est une création ou une modification
+      const isEditing = editingArticleId !== null;
+      const url = isEditing ? `/api/projects/${editingArticleId}` : "/api/projects";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title_fr: formData.titreFr,
-          title_en: formData.titreEn,
-          summary_fr: formData.resumeFr,
-          summary_en: formData.resumeEn,
-          methods_fr: formData.methodsFr,
-          methods_en: formData.methodsEn,
-          results_fr: formData.resultsFr,
-          results_en: formData.resultsEn,
-          perspectives_fr: formData.perspectivesFr,
-          perspectives_en: formData.perspectivesEn,
-        }),
+        body: JSON.stringify(payload),
       });
 
       console.log("Réponse status:", response.status);
@@ -231,9 +261,16 @@ export default function FormulairePage() {
                 
                 {/* Progress Header */}
                 <div className="content-stretch flex flex-col gap-2 sm:gap-3 md:gap-4 items-start w-full">
-                  <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-2xl md:text-3xl text-black w-full">
-                    {steps[currentStep - 1].title}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-2xl md:text-3xl text-black">
+                      {steps[currentStep - 1].title}
+                    </p>
+                    {editingArticleId && (
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm font-medium">
+                        Édition
+                      </span>
+                    )}
+                  </div>
                   <div className="h-1 w-full bg-gray-50 rounded-full relative">
                     <div 
                       className="h-full bg-primary rounded-full transition-all duration-300"
