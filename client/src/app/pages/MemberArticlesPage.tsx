@@ -14,6 +14,12 @@ interface Article {
   created_at: string;
   code_anr?: string;
   image?: string;
+  methods_fr?: string;
+  methods_en?: string;
+  results_fr?: string;
+  results_en?: string;
+  perspectives_fr?: string;
+  perspectives_en?: string;
 }
 
 export default function MemberArticlesPage() {
@@ -21,6 +27,11 @@ export default function MemberArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterStatus, setFilterStatus] = useState("tous");
 
   useEffect(() => {
     fetchArticles();
@@ -99,6 +110,49 @@ export default function MemberArticlesPage() {
     }).format(date);
   };
 
+  // Fonction pour vérifier si un article est complet
+  const isArticleComplete = (article: Article): boolean => {
+    // Un article est complet si tous les champs (obligatoires et optionnels) sont remplis
+    return !!(
+      article.title_fr?.trim() &&
+      article.title_en?.trim() &&
+      article.summary_fr?.trim() &&
+      article.summary_en?.trim() &&
+      article.methods_fr?.trim() &&
+      article.methods_en?.trim() &&
+      article.results_fr?.trim() &&
+      article.results_en?.trim() &&
+      article.perspectives_fr?.trim() &&
+      article.perspectives_en?.trim()
+    );
+  };
+
+  // Fonction pour filtrer les articles
+  const getFilteredArticles = () => {
+    let filtered = articles.filter((article) => {
+      const matchesSearch = searchTerm === "" || 
+        article.title_fr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.title_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.summary_fr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.summary_en.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Filtre par statut - vérifier si l'article est complété ou non
+      const isComplete = isArticleComplete(article);
+      const matchesStatus = filterStatus === "tous" || 
+        (filterStatus === "completed" && isComplete) ||
+        (filterStatus === "in_progress" && !isComplete);
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    // Tri par date
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
+  };
+
   return (
     <div className="bg-white flex flex-col items-center relative size-full">
       <Navigation />
@@ -117,8 +171,10 @@ export default function MemberArticlesPage() {
             </div>
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center justify-end gap-[20px]">
-                <button className="flex gap-[10px] items-center p-[5px] rounded-[4px]">
-                  <div aria-hidden="true" className="absolute border border-black inset-0 pointer-events-none rounded-[4px]" />
+                <button 
+                  onClick={() => setShowSearchInput(!showSearchInput)}
+                  className="flex gap-[10px] items-center p-[5px] rounded-[4px] border border-black hover:bg-gray-100"
+                >
                   <div className="relative size-[32px]">
                     <div className="absolute inset-[12.5%_14.27%_14.27%_12.5%]" data-name="Vector">
                       <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 23.4526 23.4526">
@@ -127,16 +183,94 @@ export default function MemberArticlesPage() {
                     </div>
                   </div>
                 </button>
-                <button className="flex gap-[10px] items-center p-[5px] rounded-[4px]">
-                  <div aria-hidden="true" className="absolute border border-black inset-0 pointer-events-none rounded-[4px]" />
+                <button 
+                  onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  className="flex gap-[10px] items-center p-[5px] rounded-[4px] border border-black hover:bg-gray-100 relative"
+                >
                   <div className="relative size-[32px]">
                     <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
                       <path d="M4 8H28V10.6667H4V8ZM8 14.6667H24V17.3333H8V14.6667ZM12 21.3333H20V24H12V21.3333Z" fill="black" />
                     </svg>
                   </div>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[32px] text-black whitespace-nowrap">
-                    Filtre
-                  </p>
+                  
+                  {/* Menu déroulant filtre */}
+                  {showFilterMenu && (
+                    <div className="absolute top-full left-0 mt-[10px] bg-white border-2 border-black rounded-[4px] shadow-lg z-50 p-[10px] w-[250px]">
+                      <div className="flex flex-col gap-[15px]">
+                        {/* Filtre par date */}
+                        <div className="flex flex-col gap-[8px]">
+                          <p className="font-['Inter:Bold',sans-serif] font-bold text-[14px] text-black">
+                            Tri par date
+                          </p>
+                          <button
+                            onClick={() => {
+                              setSortOrder("desc");
+                              setShowFilterMenu(false);
+                            }}
+                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
+                              sortOrder === "desc" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            Plus récents
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOrder("asc");
+                              setShowFilterMenu(false);
+                            }}
+                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
+                              sortOrder === "asc" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            Plus anciens
+                          </button>
+                        </div>
+
+                        {/* Séparateur */}
+                        <div className="h-[1px] bg-gray-300" />
+
+                        {/* Filtre par statut */}
+                        <div className="flex flex-col gap-[8px]">
+                          <p className="font-['Inter:Bold',sans-serif] font-bold text-[14px] text-black">
+                            Statut
+                          </p>
+                          <button
+                            onClick={() => {
+                              setFilterStatus("tous");
+                              setShowFilterMenu(false);
+                            }}
+                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
+                              filterStatus === "tous" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            Tous
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFilterStatus("completed");
+                              setShowFilterMenu(false);
+                            }}
+                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
+                              filterStatus === "completed" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            Terminé
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFilterStatus("in_progress");
+                              setShowFilterMenu(false);
+                            }}
+                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
+                              filterStatus === "in_progress" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            En cours
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </button>
               </div>
               <Link
@@ -153,6 +287,16 @@ export default function MemberArticlesPage() {
                 </div>
               </Link>
             </div>
+            {/* Champ de recherche visible */}
+            {showSearchInput && (
+              <input
+                type="text"
+                placeholder="Rechercher par titre ou résumé..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full p-[10px] border border-gray-300 rounded-[4px] font-['Inter:Regular',sans-serif]"
+              />
+            )}
             {error && (
               <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {error}
@@ -165,15 +309,15 @@ export default function MemberArticlesPage() {
                   Chargement des articles...
                 </p>
               </div>
-            ) : articles.length === 0 ? (
+            ) : getFilteredArticles().length === 0 ? (
               <div className="w-full text-center py-8">
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] text-gray-600">
-                  Aucun article pour le moment. Créez votre premier article !
+                  {searchTerm ? "Aucun article trouvé. Essayez une autre recherche." : "Aucun article pour le moment. Créez votre premier article !"}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-[40px] w-full">
-                {articles.map((article) => (
+                {getFilteredArticles().map((article) => (
                   <div key={article.id} className="bg-primary relative flex flex-col items-center pb-[103px] rounded-[4px]">
                     <button
                       onClick={() => handleDeleteArticle(article.id, article.title_fr)}
@@ -197,9 +341,9 @@ export default function MemberArticlesPage() {
                             {formatDate(article.created_at)}
                           </p>
                         </div>
-                        <div className="bg-success flex items-center justify-center p-[5px] rounded-[4px]">
+                        <div className={`flex items-center justify-center p-[5px] rounded-[4px] ${isArticleComplete(article) ? "bg-success" : "bg-orange-500"}`}>
                           <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
-                            Complété
+                            {isArticleComplete(article) ? "Complété" : "En cours"}
                           </p>
                         </div>
                       </div>
