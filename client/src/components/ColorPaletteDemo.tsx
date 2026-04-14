@@ -1,5 +1,4 @@
-import React from 'react';
-import { COLORS, COLOR_GROUPS } from '@/styles/colors';
+import { COLORS } from '../styles/colors';
 
 interface ColorBoxProps {
   name: string;

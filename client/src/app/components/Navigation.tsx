@@ -29,7 +29,8 @@ function Group() {
   );
 }
 
-function MenuHamburger({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
+/* 
+function _MenuHamburger({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -42,6 +43,7 @@ function MenuHamburger({ isOpen, onClick }: { isOpen: boolean; onClick: () => vo
     </button>
   );
 }
+*/
 
 export function Navigation() {
   const location = useLocation();

@@ -8,6 +8,7 @@ import { GalleryLightbox } from "../../components/GalleryLightbox.tsx";
 import { useLanguage } from "../../../contexts/LanguageContext.tsx";
 import { useAuth } from "../../../contexts/AuthContext.tsx";
 import { t } from "../../../contexts/translations.tsx";
+import HtmlContent from "../../components/HtmlContent.tsx";
 
 // Ensure Tailwind CSS variables are available
 if (typeof document !== "undefined" && !document.documentElement.style.getPropertyValue('--color-primary')) {
@@ -60,15 +61,15 @@ const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
 };
 
 // Fonction pour obtenir le contenu avec fallback
-const getContent = (content: string | null, language: 'FR' | 'EN'): string => {
-  return content && content.trim() ? content : t(language, "nonCompletee");
+const getContent = (content: string | null): string => {
+  return content && content.trim() ? content : "";
 };
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [activeSection, setActiveSection] = useState("resume");
   const [showFullGallery, setShowFullGallery] = useState(false);
   const [showFullMedia, setShowFullMedia] = useState(false);
@@ -202,10 +203,10 @@ export default function ArticlePage() {
   }
 
   const sections = [
-    { id: "resume", title: t(language, "resume"), content: getContent(language === 'FR' ? article.summary_fr : article.summary_en, language) },
-    { id: "methodes", title: t(language, "methodes"), content: getContent(language === 'FR' ? article.methods_fr : article.methods_en, language) },
-    { id: "resultats", title: t(language, "resultats"), content: getContent(language === 'FR' ? article.results_fr : article.results_en, language) },
-    { id: "perspectives", title: t(language, "perspectives"), content: getContent(language === 'FR' ? article.perspectives_fr : article.perspectives_en, language) },
+    { id: "resume", title: t(language, "resume"), content: getContent(language === 'FR' ? article.summary_fr : article.summary_en) },
+    { id: "methodes", title: t(language, "methodes"), content: getContent(language === 'FR' ? article.methods_fr : article.methods_en) },
+    { id: "resultats", title: t(language, "resultats"), content: getContent(language === 'FR' ? article.results_fr : article.results_en) },
+    { id: "perspectives", title: t(language, "perspectives"), content: getContent(language === 'FR' ? article.perspectives_fr : article.perspectives_en) },
   ];
 
   return (
@@ -285,9 +286,7 @@ export default function ArticlePage() {
                   <p className="font-['Inter:Bold',sans-serif] font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
                     {section.title}
                   </p>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-6 sm:leading-7 text-sm sm:text-base md:text-base text-black text-justify w-full">
-                    {section.content}
-                  </p>
+                  <HtmlContent html={section.content} />
                 </div>
               ))}
             </div>

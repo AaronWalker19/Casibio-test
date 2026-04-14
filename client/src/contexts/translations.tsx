@@ -77,6 +77,9 @@ export const translations = {
     supprimer: "Supprimer",
     annuler: "Annuler",
     retourArticles: "Retour aux articles",
+    ALL_RIGHTS: "Tous droits réservés",
+    LEGAL: "Mentions légales",
+    CREATION: "Création",
   },
   EN: {
     // Navigation
@@ -156,6 +159,9 @@ export const translations = {
     supprimer: "Delete",
     annuler: "Cancel",
     retourArticles: "Return to articles",
+    ALL_RIGHTS: "All rights reserved",
+    LEGAL: "Legal notices",
+    CREATION: "Creation",
   },
 };
 

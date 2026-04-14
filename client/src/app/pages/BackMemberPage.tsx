@@ -71,7 +71,7 @@ export default function BackMemberPage() {
     }
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  const _handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -230,6 +230,49 @@ export default function BackMemberPage() {
                 {successMessage}
               </div>
             )}
+            <div className="bg-white flex flex-col gap-[20px] p-[30px] relative rounded-[8px] shadow-lg w-full">
+              <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-black w-full">
+                Ajouter un utilisateur
+              </p>
+              <form onSubmit={_handleAddUser} className="flex gap-[15px] items-end w-full">
+                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
+                  <input
+                    type="text"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                    placeholder="Nom d'utilisateur (min 3 caractères)"
+                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
+                  />
+                </div>
+                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
+                  <input
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    placeholder="Email"
+                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
+                  />
+                </div>
+                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
+                  <input
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="Mot de passe (min 8 caractères)"
+                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-primary flex items-center justify-center px-[40px] py-[12px] rounded-[4px] disabled:opacity-50 cursor-pointer hover:bg-opacity-90 transition"
+                >
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
+                    {loading ? "Ajout en cours..." : "Ajouter"}
+                  </p>
+                </button>
+              </form>
+            </div>
 
             {/* Section Recherche et Filtre */}
             <div className="flex items-center justify-between w-full">

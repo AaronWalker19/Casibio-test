@@ -4,11 +4,47 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { check, validationResult } = require("express-validator");
+const sanitizeHtml = require("sanitize-html");
 let db;
 
-// ✅ Helper: Convertir les strings vides en null
+// ✅ Helper: Sanitize HTML content from React Quill
+const sanitizeContent = (html) => {
+  if (!html || typeof html !== 'string') return null;
+  
+  return sanitizeHtml(html, {
+    allowedTags: [
+      'b', 'i', 'em', 'strong', 'u', 's', 'del', 
+      'p', 'br', 'ul', 'ol', 'li', 
+      'h1', 'h2', 'h3', 'blockquote', 'pre', 'code',
+      'a', 'span'
+    ],
+    allowedAttributes: {
+      'a': ['href', 'title'],
+      'span': ['style'],
+      '*': ['class']
+    },
+    allowedStyles: {
+      '*': {
+        'color': [/^#(0x)?[0-9a-f]{3}([0-9a-f]{3})?$/i, /^rgb/, /^hsl/],
+        'background-color': [/^#(0x)?[0-9a-f]{3}([0-9a-f]{3})?$/i, /^rgb/, /^hsl/],
+        'text-align': [/^(left|right|center|justify)$/]
+      }
+    },
+    disallowedTagsMode: 'discard'
+  });
+};
+
+// ✅ Helper: Convertir les strings vides en null + Sanitize HTML si nécessaire
 const cleanParam = (value) => {
-  return value && typeof value === 'string' && value.trim() ? value.trim() : null;
+  if (!value || typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  
+  // Si c'est du HTML (contient des balises), le nettoyer
+  if (/<[^>]*>/.test(trimmed)) {
+    return sanitizeContent(trimmed);
+  }
+  return trimmed;
 };
 
 // SÉCURITÉ: Validateur de chemin de fichier
@@ -105,14 +141,14 @@ router.post("/",
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 5000 }).notEmpty(),
-    check('summary_en').trim().isLength({ max: 5000 }).notEmpty(),
-    check('methods_fr').trim().optional(),
-    check('methods_en').trim().optional(),
-    check('results_fr').trim().optional(),
-    check('results_en').trim().optional(),
-    check('perspectives_fr').trim().optional(),
-    check('perspectives_en').trim().optional(),
+    check('summary_fr').trim().isLength({ max: 50000 }).notEmpty(),
+    check('summary_en').trim().isLength({ max: 50000 }).notEmpty(),
+    check('methods_fr').trim().isLength({ max: 50000 }).optional(),
+    check('methods_en').trim().isLength({ max: 50000 }).optional(),
+    check('results_fr').trim().isLength({ max: 50000 }).optional(),
+    check('results_en').trim().isLength({ max: 50000 }).optional(),
+    check('perspectives_fr').trim().isLength({ max: 50000 }).optional(),
+    check('perspectives_en').trim().isLength({ max: 50000 }).optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -444,14 +480,14 @@ router.put("/:projectId",
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 5000 }).notEmpty(),
-    check('summary_en').trim().isLength({ max: 5000 }).notEmpty(),
-    check('methods_fr').trim().optional(),
-    check('methods_en').trim().optional(),
-    check('results_fr').trim().optional(),
-    check('results_en').trim().optional(),
-    check('perspectives_fr').trim().optional(),
-    check('perspectives_en').trim().optional(),
+    check('summary_fr').trim().isLength({ max: 50000 }).notEmpty(),
+    check('summary_en').trim().isLength({ max: 50000 }).notEmpty(),
+    check('methods_fr').trim().isLength({ max: 50000 }).optional(),
+    check('methods_en').trim().isLength({ max: 50000 }).optional(),
+    check('results_fr').trim().isLength({ max: 50000 }).optional(),
+    check('results_en').trim().isLength({ max: 50000 }).optional(),
+    check('perspectives_fr').trim().isLength({ max: 50000 }).optional(),
+    check('perspectives_en').trim().isLength({ max: 50000 }).optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);

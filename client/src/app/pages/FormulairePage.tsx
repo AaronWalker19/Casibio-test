@@ -5,6 +5,7 @@ import { Footer } from "../components/Footer.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { useLanguage } from "../../contexts/LanguageContext.tsx";
 import { t } from "../../contexts/translations.tsx";
+import RichTextEditor from "../components/RichTextEditor.tsx";
 
 export default function FormulairePage() {
   const navigate = useNavigate();
@@ -90,11 +91,19 @@ export default function FormulairePage() {
     { number: 4, title: "Perspectives", key: "perspectives" },
   ];
 
+  // Fonction pour vérifier si le contenu HTML (de Quill) est vide
+  const isHtmlEmpty = (html: string): boolean => {
+    if (!html || !html.trim()) return true;
+    // React Quill peut retourner <p><br></p> ou similaraire pour un champ vide
+    const stripped = html.replace(/<[^>]*>/g, "").trim();
+    return stripped.length === 0;
+  };
+
   const validateStep = (step: number): boolean => {
     if (step === 1) {
       // Titre et résumé obligatoires
       if (!formData.titreFr.trim() || !formData.titreEn.trim() || 
-          !formData.resumeFr.trim() || !formData.resumeEn.trim()) {
+          isHtmlEmpty(formData.resumeFr) || isHtmlEmpty(formData.resumeEn)) {
         setError("Le titre et le résumé sont obligatoires (FR et EN)");
         return false;
       }
@@ -108,8 +117,8 @@ export default function FormulairePage() {
     return (
       formData.titreFr.trim() &&
       formData.titreEn.trim() &&
-      formData.resumeFr.trim() &&
-      formData.resumeEn.trim() &&
+      !isHtmlEmpty(formData.resumeFr) &&
+      !isHtmlEmpty(formData.resumeEn) &&
       !formLoading
     );
   };
@@ -324,24 +333,20 @@ export default function FormulairePage() {
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
                           Résumé <span className="text-red-500">*</span>
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.resumeFr}
-                          onChange={(e) => setFormData({ ...formData, resumeFr: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, resumeFr: value })}
                           placeholder="Français"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                       <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
                           .
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.resumeEn}
-                          onChange={(e) => setFormData({ ...formData, resumeEn: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, resumeEn: value })}
                           placeholder="English"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                     </div>
@@ -356,24 +361,20 @@ export default function FormulairePage() {
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
                           Méthodes
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.methodsFr}
-                          onChange={(e) => setFormData({ ...formData, methodsFr: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, methodsFr: value })}
                           placeholder="Français"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                       <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
                           .
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.methodsEn}
-                          onChange={(e) => setFormData({ ...formData, methodsEn: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, methodsEn: value })}
                           placeholder="English"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                     </div>
@@ -388,24 +389,20 @@ export default function FormulairePage() {
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
                           Résultats
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.resultsFr}
-                          onChange={(e) => setFormData({ ...formData, resultsFr: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, resultsFr: value })}
                           placeholder="Français"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                       <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
                           .
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.resultsEn}
-                          onChange={(e) => setFormData({ ...formData, resultsEn: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, resultsEn: value })}
                           placeholder="English"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                     </div>
@@ -420,24 +417,20 @@ export default function FormulairePage() {
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
                           Perspectives
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.perspectivesFr}
-                          onChange={(e) => setFormData({ ...formData, perspectivesFr: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, perspectivesFr: value })}
                           placeholder="Français"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                       <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
                           .
                         </label>
-                        <textarea
+                        <RichTextEditor
                           value={formData.perspectivesEn}
-                          onChange={(e) => setFormData({ ...formData, perspectivesEn: e.target.value })}
+                          onChange={(value) => setFormData({ ...formData, perspectivesEn: value })}
                           placeholder="English"
-                          rows={6}
-                          className="bg-white border-gray-50 border-2 content-stretch flex items-start p-3 sm:p-4 md:p-5 rounded-sm resize-vertical w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
                       </div>
                     </div>

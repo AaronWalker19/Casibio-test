@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -54,3 +55,4 @@ function ResizableHandle({
 }
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
+

@@ -12,7 +12,7 @@ export default function PlanDuSitePage() {
     { path: "/articles", label: "articles" },
     { path: "/gallerie", label: "gallerie" },
     
-  ];
+  ] as const;
 
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">

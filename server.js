@@ -79,9 +79,6 @@ app.use("/api/", apiLimiter);
 // ===== SERVE UPLOADS FOLDER =====
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ===== SERVE PUBLIC ASSETS =====
-app.use(express.static(path.join(__dirname, "client/public")));
-
 // ===== ROUTES API =====
 try {
   const authRoutes = require("./routes/auth");
@@ -241,10 +238,10 @@ app.post("/api/admin/init-db", async (req, res) => {
     });
   }
 });
-app.use(express.static(path.join(__dirname, "client/public")));
 
-// ===== SERVE FRONTEND =====
+// ===== SERVE FRONTEND BUILD (PRIORITÉ AU BUILD, PAS PUBLIC) =====
 app.use(express.static(path.join(__dirname, "client/build")));
+app.use(express.static(path.join(__dirname, "client/public")));
 
 // ===== CATCH ALL (IMPORTANT FIX) =====
 app.use((req, res, next) => {
