@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
+import Link from "@tiptap/extension-link";
 import {
   Bold,
   Italic,
@@ -16,7 +18,7 @@ import {
   AlignCenter,
   AlignRight,
   Quote,
-  Code,
+  LinkIcon,
   Undo,
   Redo,
 } from "lucide-react";
@@ -28,11 +30,45 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
+interface Article {
+  id: number;
+  title_fr: string;
+  title_en: string;
+}
+
 export default function RichTextEditor({
   value,
   onChange,
   placeholder = "",
 }: RichTextEditorProps) {
+  const [showLinkPopup, setShowLinkPopup] = useState(false);
+  const [showArticleDropdown, setShowArticleDropdown] = useState(false);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [customUrl, setCustomUrl] = useState("");
+  const [selectedArticle, setSelectedArticle] = useState<number | null>(null);
+
+  // Récupérer les articles existants
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await fetch("/api/projects", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setArticles(data);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des articles:", error);
+      }
+    };
+
+    fetchArticles();
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -41,6 +77,10 @@ export default function RichTextEditor({
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
+      Link.configure({
+        openOnClick: false,
+        autolink: false,
+      }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -48,9 +88,89 @@ export default function RichTextEditor({
     },
   });
 
+  // Mettre à jour le contenu de l'éditeur quand la prop value change
+  useEffect(() => {
+    if (editor && value) {
+      const currentContent = editor.getHTML();
+      if (currentContent !== value) {
+        editor.commands.setContent(value, false);
+      }
+    }
+  }, [value, editor]);
+
   if (!editor) {
     return null;
   }
+
+  const handleLinkClick = () => {
+    setShowLinkPopup(true);
+    setShowArticleDropdown(false);
+    setCustomUrl("");
+    setSelectedArticle(null);
+  };
+
+  const handleInsertLink = () => {
+    if (selectedArticle) {
+      // Insérer un lien vers un article
+      const article = articles.find((a) => a.id === selectedArticle);
+      if (article) {
+        const articleUrl = `/articles/${selectedArticle}`;
+        const linkLabel = `${article.title_fr}`;
+        editor
+          .chain()
+          .focus()
+          .insertContent(
+            `<a href="${articleUrl}">${linkLabel}</a>`
+          )
+          .run();
+      }
+      resetLinkPopup();
+    } else if (customUrl) {
+      // Insérer une URL personnalisée
+      editor
+        .chain()
+        .focus()
+        .setLink({ href: customUrl })
+        .run();
+      resetLinkPopup();
+    }
+  };
+
+  const insertUrlLink = () => {
+    if (customUrl) {
+      editor
+        .chain()
+        .focus()
+        .setLink({ href: customUrl })
+        .run();
+      resetLinkPopup();
+    }
+  };
+
+  const insertArticleLink = () => {
+    if (selectedArticle) {
+      const article = articles.find((a) => a.id === selectedArticle);
+      if (article) {
+        const articleUrl = `/articles/${selectedArticle}`;
+        const linkLabel = `${article.title_fr}`;
+        editor
+          .chain()
+          .focus()
+          .insertContent(
+            `<a href="${articleUrl}">${linkLabel}</a>`
+          )
+          .run();
+      }
+      resetLinkPopup();
+    }
+  };
+
+  const resetLinkPopup = () => {
+    setShowLinkPopup(false);
+    setShowArticleDropdown(false);
+    setCustomUrl("");
+    setSelectedArticle(null);
+  };
 
   const ToolbarButton = ({
     onClick,
@@ -176,10 +296,10 @@ export default function RichTextEditor({
             title="Citation"
           />
           <ToolbarButton
-            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            isActive={editor.isActive("codeBlock")}
-            icon={Code}
-            title="Bloc de code"
+            onClick={handleLinkClick}
+            isActive={editor.isActive("link")}
+            icon={LinkIcon}
+            title="Insérer un lien"
           />
         </div>
 
@@ -202,6 +322,76 @@ export default function RichTextEditor({
         editor={editor}
         className="bg-white p-4 min-h-64 prose prose-sm max-w-none focus:outline-none"
       />
+
+      {/* Link Popup - Petit popup compact */}
+      {showLinkPopup && (
+        <div className="fixed z-50 bg-white border-2 border-gray-300 rounded-lg shadow-lg p-4 min-w-80">
+          <div className="space-y-3 flex flex-col p-3">
+            {/* Liste déroulante des articles */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                Articles
+              </label>
+              <select
+                value={selectedArticle || ""}
+                onChange={(e) =>
+                  setSelectedArticle(e.target.value ? Number(e.target.value) : null)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary"
+              >
+                <option value="">-- Choisir un article --</option>
+                {articles.map((article) => (
+                  <option key={article.id} value={article.id}>
+                    {article.title_fr || article.title_en}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Séparateur */}
+            <div className="border-t border-gray-300" />
+
+            {/* Champ URL */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                URL personnalisée
+              </label>
+              <input
+                autoFocus
+                type="url"
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (customUrl || selectedArticle)) {
+                    handleInsertLink();
+                  }
+                }}
+                placeholder="https://exemple.com"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary"
+              />
+            </div>
+
+            {/* Boutons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleInsertLink}
+                disabled={!customUrl && !selectedArticle}
+                className="flex-1 px-3 py-2 bg-success text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Insérer
+              </button>
+              <button
+                type="button"
+                onClick={resetLinkPopup}
+                className="px-3 py-2 bg-gray-300 text-black text-sm rounded hover:opacity-90"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

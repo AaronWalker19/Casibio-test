@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { ImageWithFallback } from "./figma/ImageWithFallback.tsx";
+import HtmlContent from "./HtmlContent.tsx";
 
 interface ArticleCardProps {
   id: number;
@@ -8,17 +9,63 @@ interface ArticleCardProps {
   status: string;
   description: string;
   image?: string;
+  onEdit?: () => void;
+  onDelete?: (id: number, title: string) => void;
+  onView?: (id: number) => void;
+  isEditable?: boolean;
 }
 
-export function ArticleCard({ id, title, date, status, description, image }: ArticleCardProps) {
+export function ArticleCard({ id, title, date, status, description, image, onEdit, onDelete, onView, isEditable = false }: ArticleCardProps) {
   const isComplete = status === "Complet" || status === "Complete";
+  
+  const handleViewClick = (e: React.MouseEvent) => {
+    if (isEditable && onView) {
+      e.preventDefault();
+      onView(id);
+    }
+  };
   
   return (
     <Link
       to={`/articles/${id}`}
+      onClick={handleViewClick}
       className="bg-primary flex flex-col items-center relative rounded-sm w-full sm:w-72 md:w-80 lg:w-96 hover:opacity-90 transition-opacity cursor-pointer"
       data-name="article"
     >
+      {/* Boutons d'édition et suppression pour les membres */}
+      {isEditable && (onEdit || onDelete) && (
+        <div className="absolute right-[10px] top-[10px] z-10 flex gap-[8px]">
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onEdit();
+              }}
+              className="bg-blue-500 p-[8px] rounded-[4px] cursor-pointer hover:bg-blue-600 transition-colors"
+              title="Modifier l'article"
+            >
+              <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="white" />
+                <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" fill="white" />
+              </svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete(id, title);
+              }}
+              className="bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
+              title="Supprimer l'article"
+            >
+              <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
+                <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="white" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
       <div className="h-40 sm:h-48 md:h-56 lg:h-64 relative  w-full">
         {image ? (
           <ImageWithFallback src={image} alt={title} className="w-full h-full object-cover" />
@@ -47,9 +94,9 @@ export function ArticleCard({ id, title, date, status, description, image }: Art
               <p className="font-['Inter:Bold',sans-serif] font-bold relative  text-lg sm:text-xl md:text-2xl lg:text-3xl w-full line-clamp-2">
                 {title}
               </p>
-              <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 relative  text-xs sm:text-sm w-full line-clamp-2">
-                {description}
-              </p>
+              <div className="font-['Inter:Regular',sans-serif] font-normal opacity-70 relative  text-xs sm:text-sm w-full line-clamp-2">
+                <HtmlContent html={description} className="text-xs sm:text-sm" />
+              </div>
             </div>
           </div>
         </div>

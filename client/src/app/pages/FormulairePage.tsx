@@ -259,14 +259,6 @@ export default function FormulairePage() {
           <div className="content-stretch flex flex-col gap-6 sm:gap-8 md:gap-10 items-center p-4 sm:p-6 md:p-8 lg:p-12 relative w-full max-w-4xl">
             <form 
               onSubmit={handleSubmit}
-              onKeyDown={(e) => {
-                // ✅ Empêcher le submit accidentel si on appuie sur Entrée en dehors du bouton "Terminer"
-                if (e.key === "Enter" && !(e.target as HTMLElement).classList.contains("submit-button")) {
-                  if (currentStep !== steps.length) {
-                    e.preventDefault();
-                  }
-                }
-              }}
               className="w-full">
               <div className="bg-white content-stretch flex flex-col gap-6 sm:gap-8 md:gap-10 p-6 sm:p-8 md:p-10 lg:p-12 relative rounded-lg w-full">
                 <div aria-hidden="true" className="absolute border-gray-50 border-2 inset-0 pointer-events-none rounded-lg" />
@@ -311,6 +303,11 @@ export default function FormulairePage() {
                           type="text"
                           value={formData.titreFr}
                           onChange={(e) => setFormData({ ...formData, titreFr: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                            }
+                          }}
                           placeholder="Français"
                           className="bg-white border-gray-50 border-2 content-stretch flex items-center p-3 sm:p-4 md:p-5 rounded-sm w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />
@@ -323,6 +320,11 @@ export default function FormulairePage() {
                           type="text"
                           value={formData.titreEn}
                           onChange={(e) => setFormData({ ...formData, titreEn: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                            }
+                          }}
                           placeholder="English"
                           className="bg-white border-gray-50 border-2 content-stretch flex items-center p-3 sm:p-4 md:p-5 rounded-sm w-full font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base md:text-lg text-black placeholder:text-gray-300"
                         />

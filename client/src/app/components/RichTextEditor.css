@@ -66,12 +66,22 @@
 
 .rich-text-editor .tiptap ul,
 .rich-text-editor .tiptap ol {
-  padding: 0 1.5rem;
+  padding-left: 2rem;
   margin: 1em 0;
+  list-style-position: outside;
+}
+
+.rich-text-editor .tiptap ul {
+  list-style-type: disc;
+}
+
+.rich-text-editor .tiptap ol {
+  list-style-type: decimal;
 }
 
 .rich-text-editor .tiptap li {
   margin-bottom: 0.5em;
+  display: list-item;
 }
 
 .rich-text-editor .tiptap pre {
@@ -116,6 +126,16 @@
   border: none;
   border-top: 2px solid #e5e7eb;
   margin: 2rem 0;
+}
+
+.rich-text-editor .tiptap a {
+  color: #87ceeb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rich-text-editor .tiptap a:hover {
+  color: #6bb6d6;
 }
 
 .rich-text-editor .tiptap [data-align="left"] {
@@ -191,4 +211,14 @@
   background-color: transparent;
   padding: 0;
   color: #000;
+}
+
+:global(.rich-text-content a) {
+  color: #87ceeb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+:global(.rich-text-content a:hover) {
+  color: #6bb6d6;
 }

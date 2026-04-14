@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
+import { ArticleCard } from "../components/ArticleCard.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
+import { useLanguage } from "../../contexts/LanguageContext.tsx";
 
 interface Article {
   id: number;
@@ -25,6 +27,7 @@ interface Article {
 export default function MemberArticlesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -329,62 +332,19 @@ export default function MemberArticlesPage() {
             ) : (
               <div className="grid grid-cols-3 gap-[40px] w-full">
                 {getFilteredArticles().map((article) => (
-                  <div key={article.id} className="bg-primary relative flex flex-col items-center pb-[103px] rounded-[4px]">
-                    <div className="absolute right-[10px] top-[10px] z-10 flex gap-[8px]">
-                      <button
-                        onClick={() => handleEditArticle(article)}
-                        className="bg-blue-500 p-[8px] rounded-[4px] cursor-pointer hover:bg-blue-600 transition-colors"
-                        title="Modifier l'article"
-                      >
-                        <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
-                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="white" />
-                          <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" fill="white" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteArticle(article.id, article.title_fr)}
-                        className="bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer hover:bg-[#a01f26] transition-colors"
-                        title="Supprimer l'article"
-                      >
-                        <svg className="size-[24px]" fill="none" viewBox="0 0 24 24">
-                          <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="white" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="h-[270px] mb-[-103px] w-full">
-                      <ImageWithFallback 
-                        src={article.image ?? "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"} 
-                        alt={article.title_fr} 
-                        className="w-full h-full object-cover rounded-t-[4px]" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-[5px] items-end mb-[-103px] p-[10px] w-full">
-                      <div className="flex gap-[5px] items-center w-full">
-                        <div className="bg-error flex items-center justify-center p-[5px] rounded-[4px]">
-                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
-                            {formatDate(article.created_at)}
-                          </p>
-                        </div>
-                        <div className={`flex items-center justify-center p-[5px] rounded-[4px] ${isArticleComplete(article) ? "bg-success" : "bg-orange-500"}`}>
-                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[12px] text-white whitespace-nowrap">
-                            {isArticleComplete(article) ? "Complété" : "En cours"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-[4px] w-full cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleViewArticle(article.id)}>
-                        <div className="flex flex-col items-center justify-center size-full">
-                          <div className="flex flex-col gap-[10px] items-center justify-center leading-[normal] p-[20px] text-primary text-center w-full">
-                            <p className="font-['Inter:Bold',sans-serif] font-bold text-[24px] w-full">
-                              {article.title_fr}
-                            </p>
-                            <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 text-[14px] w-full">
-                              {article.summary_fr}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ArticleCard
+                    key={article.id}
+                    id={article.id}
+                    title={language === 'FR' ? article.title_fr : article.title_en}
+                    date={formatDate(article.created_at)}
+                    status={isArticleComplete(article) ? "Complété" : "En cours"}
+                    description={language === 'FR' ? (article.summary_fr ?? "") : (article.summary_en ?? "")}
+                    image={article.image}
+                    isEditable={true}
+                    onEdit={() => handleEditArticle(article)}
+                    onDelete={(id, title) => handleDeleteArticle(id, title)}
+                    onView={handleViewArticle}
+                  />
                 ))}
               </div>
             )}
