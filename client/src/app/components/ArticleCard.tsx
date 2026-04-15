@@ -66,7 +66,7 @@ export function ArticleCard({ id, title, date, status, description, image, onEdi
           )}
         </div>
       )}
-      <div className="h-40 sm:h-48 md:h-56 lg:h-64 relative  w-full">
+      <div className="h-40 sm:h-48 md:h-56 lg:h-72 pb-5 relative  w-full">
         {image ? (
           <ImageWithFallback src={image} alt={title} className="w-full h-full object-cover" />
         ) : (

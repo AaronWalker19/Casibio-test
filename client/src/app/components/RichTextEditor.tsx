@@ -377,7 +377,7 @@ export default function RichTextEditor({
                 type="button"
                 onClick={handleInsertLink}
                 disabled={!customUrl && !selectedArticle}
-                className="flex-1 px-3 py-2 bg-success text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-3 py-2 bg-primary text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Insérer
               </button>

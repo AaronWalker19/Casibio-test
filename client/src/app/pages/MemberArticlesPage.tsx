@@ -36,6 +36,7 @@ export default function MemberArticlesPage() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filterStatus, setFilterStatus] = useState("tous");
+  const [articleImages, setArticleImages] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     fetchArticles();
@@ -65,6 +66,41 @@ export default function MemberArticlesPage() {
       const data = await response.json();
       setArticles(data);
       setError("");
+      
+      // Récupérer les images liées à chaque article
+      const imagesMap: { [key: number]: string } = {};
+      for (const article of data) {
+        try {
+          const filesResponse = await fetch(`/api/projects/${article.id}/files`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+            credentials: 'include',
+          });
+          if (filesResponse.ok) {
+            const files = await filesResponse.json();
+            if (files.length > 0) {
+              // Filtrer et trier les images par date (la plus récente d'abord)
+              const imagesOnly = files.filter((f: any) => 
+                f.file_type?.toLowerCase().includes('image') ||
+                f.file_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+              );
+              
+              if (imagesOnly.length > 0) {
+                // Trier par date décroissante (plus récent d'abord)
+                const sortedImages = imagesOnly.sort((a: any, b: any) => {
+                  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
+                // Prendre l'image la plus récente
+                imagesMap[article.id] = sortedImages[0].file_path;
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Erreur lors du chargement des images pour l'article ${article.id}:`, err);
+        }
+      }
+      setArticleImages(imagesMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors du chargement");
       console.error("Error fetching articles:", err);
@@ -339,7 +375,7 @@ export default function MemberArticlesPage() {
                     date={formatDate(article.created_at)}
                     status={isArticleComplete(article) ? "Complété" : "En cours"}
                     description={language === 'FR' ? (article.summary_fr ?? "") : (article.summary_en ?? "")}
-                    image={article.image}
+                    image={articleImages[article.id]}
                     isEditable={true}
                     onEdit={() => handleEditArticle(article)}
                     onDelete={(id, title) => handleDeleteArticle(id, title)}
