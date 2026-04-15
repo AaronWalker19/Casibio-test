@@ -16,6 +16,8 @@ export default function FormulairePage() {
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingArticleId, setEditingArticleId] = useState<number | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [presentImageFile, setPresentImageFile] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
@@ -89,6 +91,7 @@ export default function FormulairePage() {
     { number: 2, title: "Méthodes", key: "methods" },
     { number: 3, title: "Résultats", key: "results" },
     { number: 4, title: "Perspectives", key: "perspectives" },
+    { number: 5, title: "Fichiers et Image", key: "files" },
   ];
 
   // Fonction pour vérifier si le contenu HTML (de Quill) est vide
@@ -97,6 +100,37 @@ export default function FormulairePage() {
     // React Quill peut retourner <p><br></p> ou similaraire pour un champ vide
     const stripped = html.replace(/<[^>]*>/g, "").trim();
     return stripped.length === 0;
+  };
+
+  // Gestion de l'upload de fichiers
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setUploadedFiles([...uploadedFiles, ...newFiles]);
+    }
+  };
+
+  // Supprimer un fichier uploadé
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+    // Si le fichier supprimé était marqué comme image de présentation, le démarquer
+    if (presentImageFile === uploadedFiles[index].name) {
+      setPresentImageFile(null);
+    }
+  };
+
+  // Marquer/démarquer une image comme image de présentation
+  const togglePresentImage = (fileName: string) => {
+    if (presentImageFile === fileName) {
+      setPresentImageFile(null);
+    } else {
+      // Vérifier que c'est une image
+      if (fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        setPresentImageFile(fileName);
+      } else {
+        setError("Seules les images peuvent être marquées comme image de présentation (jpg, png, gif, webp)");
+      }
+    }
   };
 
   const validateStep = (step: number): boolean => {
@@ -155,18 +189,28 @@ export default function FormulairePage() {
         return;
       }
 
-      const payload = {
-        title_fr: formData.titreFr,
-        title_en: formData.titreEn,
-        summary_fr: formData.resumeFr,
-        summary_en: formData.resumeEn,
-        methods_fr: formData.methodsFr,
-        methods_en: formData.methodsEn,
-        results_fr: formData.resultsFr,
-        results_en: formData.resultsEn,
-        perspectives_fr: formData.perspectivesFr,
-        perspectives_en: formData.perspectivesEn,
-      };
+      // Utiliser FormData pour gérer les fichiers
+      const formDataToSend = new FormData();
+      formDataToSend.append("title_fr", formData.titreFr);
+      formDataToSend.append("title_en", formData.titreEn);
+      formDataToSend.append("summary_fr", formData.resumeFr);
+      formDataToSend.append("summary_en", formData.resumeEn);
+      formDataToSend.append("methods_fr", formData.methodsFr);
+      formDataToSend.append("methods_en", formData.methodsEn);
+      formDataToSend.append("results_fr", formData.resultsFr);
+      formDataToSend.append("results_en", formData.resultsEn);
+      formDataToSend.append("perspectives_fr", formData.perspectivesFr);
+      formDataToSend.append("perspectives_en", formData.perspectivesEn);
+      
+      // Ajouter les fichiers uploadés
+      uploadedFiles.forEach((file) => {
+        formDataToSend.append("files", file);
+      });
+      
+      // Ajouter le nom du fichier marqué comme image de présentation
+      if (presentImageFile) {
+        formDataToSend.append("file_present", presentImageFile);
+      }
 
       // Déterminer si c'est une création ou une modification
       const isEditing = editingArticleId !== null;
@@ -177,10 +221,10 @@ export default function FormulairePage() {
         method: method,
         credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
+          // Ne pas définir Content-Type pour FormData - le navegateur le fera automatiquement
         },
-        body: JSON.stringify(payload),
+        body: formDataToSend,
       });
 
       console.log("Réponse status:", response.status);
@@ -436,6 +480,107 @@ export default function FormulairePage() {
                         />
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Step 5: Fichiers et Image de présentation */}
+                {currentStep === 5 && (
+                  <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
+                    {/* Upload Section */}
+                    <div className="content-stretch flex flex-col gap-2 sm:gap-3 md:gap-4 items-start w-full">
+                      <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
+                        Ajouter des fichiers
+                      </label>
+                      <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-sm p-6 sm:p-8 md:p-10 w-full">
+                        <label className="cursor-pointer flex flex-col items-center justify-center gap-2">
+                          <svg className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          <p className="text-sm sm:text-base text-gray-600 text-center">
+                            Cliquez pour sélectionner des fichiers
+                          </p>
+                          <input
+                            type="file"
+                            multiple
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            accept="*/*"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Uploaded Files List */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="content-stretch flex flex-col gap-2 sm:gap-3 md:gap-4 items-start w-full">
+                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
+                          Fichiers uploadés ({uploadedFiles.length})
+                        </label>
+                        <div className="w-full space-y-2">
+                          {uploadedFiles.map((file, index) => {
+                            const isImage = file.type.startsWith('image/');
+                            const isPresent = presentImageFile === file.name;
+                            
+                            return (
+                              <div
+                                key={index}
+                                className="bg-white border-2 border-gray-200 p-3 sm:p-4 rounded-sm w-full flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="flex-1">
+                                    <p className="text-sm sm:text-base font-medium text-gray-700 truncate">
+                                      {file.name}
+                                    </p>
+                                    <p className="text-xs sm:text-sm text-gray-500">
+                                      {(file.size / 1024).toFixed(2)} KB
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  {isImage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePresentImage(file.name)}
+                                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                        isPresent
+                                          ? "bg-blue-500 text-white"
+                                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                      }`}
+                                    >
+                                      {isPresent ? "✓ Présentation" : "Présentation"}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveFile(index)}
+                                    className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded text-sm font-medium transition-colors"
+                                  >
+                                    Supprimer
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Presentation Image Info */}
+                    {presentImageFile && (
+                      <div className="bg-blue-50 border-2 border-blue-200 p-3 sm:p-4 md:p-5 rounded-sm w-full">
+                        <p className="text-blue-600 font-normal text-sm sm:text-base">
+                          ✓ Image de présentation sélectionnée : <span className="font-medium">{presentImageFile}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {uploadedFiles.length === 0 && (
+                      <div className="bg-gray-50 p-4 sm:p-5 md:p-6 rounded-sm w-full text-center">
+                        <p className="text-gray-500 text-sm sm:text-base">
+                          Aucun fichier uploadé. Les fichiers sont optionnels.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
