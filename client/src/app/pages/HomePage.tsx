@@ -88,6 +88,7 @@ export default function HomePage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [errorArticles, setErrorArticles] = useState<string | null>(null);
+  const [totalArticlesCount, setTotalArticlesCount] = useState(0);
 
   const [galleryImagesFetched, setGalleryImagesFetched] = useState<GalleryImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
@@ -104,6 +105,9 @@ export default function HomePage() {
           throw new Error(t(language, "erreurChargementArticles"));
         }
         const data = await response.json();
+        
+        // Sauvegarder le nombre total d'articles
+        setTotalArticlesCount(data.length);
         
         // Enrichir les articles avec le statut calculé et prendre les 3 premiers
         const enrichedArticles = data
@@ -294,7 +298,7 @@ export default function HomePage() {
       <div className="bg-primary flex flex-col sm:flex-row gap-6 sm:gap-8 md:gap-12 lg:gap-16 items-center justify-center py-12 sm:py-16 md:py-20 lg:py-24 px-4 w-full">
         <div className="flex flex-col items-center text-center">
           <p className="font-['Inter:Bold',sans-serif] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl text-white whitespace-nowrap">
-            25
+            {totalArticlesCount}
           </p>
           <p className="font-['Inter:Bold',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white whitespace-nowrap">
             {t(language, "articles")}

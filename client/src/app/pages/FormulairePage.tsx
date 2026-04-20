@@ -18,6 +18,8 @@ export default function FormulairePage() {
   const [editingArticleId, setEditingArticleId] = useState<number | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [presentImageFile, setPresentImageFile] = useState<string | null>(null);
+  const [existingFiles, setExistingFiles] = useState<any[]>([]);
+  const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
@@ -36,8 +38,9 @@ export default function FormulairePage() {
     const state = location.state as any;
     if (state?.editingArticle) {
       const article = state.editingArticle;
+      console.log("📋 Édition d'article détecté:", article);
       setEditingArticleId(article.id);
-      setFormData({
+      const newFormData = {
         titreFr: article.title_fr || "",
         titreEn: article.title_en || "",
         resumeFr: article.summary_fr || "",
@@ -48,7 +51,37 @@ export default function FormulairePage() {
         resultsEn: article.results_en || "",
         perspectivesFr: article.perspectives_fr || "",
         perspectivesEn: article.perspectives_en || "",
-      });
+      };
+      console.log("📝 FormData pré-rempli:", newFormData);
+      setFormData(newFormData);
+
+      // Récupérer les fichiers liés à l'article
+      const fetchArticleFiles = async () => {
+        try {
+          const token = localStorage.getItem('authToken');
+          if (!token) return;
+
+          const response = await fetch(`/api/projects/${article.id}/files`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const filesData = await response.json();
+            console.log("📁 Fichiers récupérés:", filesData);
+            setExistingFiles(Array.isArray(filesData) ? filesData : filesData.files || []);
+          } else {
+            console.warn("Impossible de récupérer les fichiers");
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération des fichiers:", err);
+        }
+      };
+
+      fetchArticleFiles();
     }
   }, [location]);
 
@@ -133,6 +166,33 @@ export default function FormulairePage() {
     }
   };
 
+  // Supprimer un fichier existant
+  const handleRemoveExistingFile = (fileId: number) => {
+    // Tracker ce fichier comme supprimé pour le serveur
+    setDeletedFileIds([...deletedFileIds, fileId]);
+    
+    setExistingFiles(existingFiles.filter((file) => file.id !== fileId));
+    // Si le fichier supprimé était marqué comme image de présentation, le démarquer
+    const removedFile = existingFiles.find((file) => file.id === fileId);
+    if (removedFile && presentImageFile === removedFile.file_name) {
+      setPresentImageFile(null);
+    }
+  };
+
+  // Marquer/démarquer une image existante comme image de présentation
+  const togglePresentImageExisting = (fileName: string) => {
+    if (presentImageFile === fileName) {
+      setPresentImageFile(null);
+    } else {
+      // Vérifier que c'est une image
+      if (fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        setPresentImageFile(fileName);
+      } else {
+        setError("Seules les images peuvent être marquées comme image de présentation (jpg, png, gif, webp)");
+      }
+    }
+  };
+
   const validateStep = (step: number): boolean => {
     if (step === 1) {
       // Titre et résumé obligatoires
@@ -202,6 +262,13 @@ export default function FormulairePage() {
       formDataToSend.append("perspectives_fr", formData.perspectivesFr);
       formDataToSend.append("perspectives_en", formData.perspectivesEn);
       
+      // LOG: Voir quelles données sont envoyées
+      console.log("🚀 Données à envoyer:");
+      console.log("  title_fr:", formData.titreFr);
+      console.log("  title_en:", formData.titreEn);
+      console.log("  summary_fr:", formData.resumeFr);
+      console.log("  summary_en:", formData.resumeEn);
+      
       // Ajouter les fichiers uploadés
       uploadedFiles.forEach((file) => {
         formDataToSend.append("files", file);
@@ -210,6 +277,12 @@ export default function FormulairePage() {
       // Ajouter le nom du fichier marqué comme image de présentation
       if (presentImageFile) {
         formDataToSend.append("file_present", presentImageFile);
+      }
+
+      // Ajouter les IDs des fichiers à supprimer
+      if (deletedFileIds.length > 0) {
+        formDataToSend.append("deleted_file_ids", JSON.stringify(deletedFileIds));
+        console.log("🗑️  Fichiers à supprimer:", deletedFileIds);
       }
 
       // Déterminer si c'est une création ou une modification
@@ -229,11 +302,24 @@ export default function FormulairePage() {
 
       console.log("Réponse status:", response.status);
       
-      const responseData = await response.json();
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      // Essayer de parser le JSON si le Content-Type indique du JSON
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        // Sinon, lire comme texte
+        const text = await response.text();
+        console.log("Réponse texte brut:", text);
+        responseData = { text };
+      }
+      
       console.log("Réponse data:", responseData);
 
       if (!response.ok) {
-        throw new Error(responseData.error || JSON.stringify(responseData.errors) || "Erreur lors de la sauvegarde");
+        const errorMessage = responseData.error || responseData.text || JSON.stringify(responseData.errors) || "Erreur lors de la sauvegarde";
+        throw new Error(errorMessage);
       }
 
       navigate("/membres/articles");
@@ -486,6 +572,61 @@ export default function FormulairePage() {
                 {/* Step 5: Fichiers et Image de présentation */}
                 {currentStep === 5 && (
                   <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
+                    {/* Existing Files Section */}
+                    {existingFiles.length > 0 && (
+                      <div className="content-stretch flex flex-col gap-2 sm:gap-3 md:gap-4 items-start w-full">
+                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
+                          Fichiers existants ({existingFiles.length})
+                        </label>
+                        <div className="w-full space-y-2">
+                          {existingFiles.map((file) => {
+                            const isImage = file.file_type.startsWith('image/');
+                            const isPresent = presentImageFile === file.file_name;
+                            
+                            return (
+                              <div
+                                key={file.id}
+                                className="bg-white border-2 border-gray-200 p-3 sm:p-4 rounded-sm w-full flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="flex-1">
+                                    <p className="text-sm sm:text-base font-medium text-gray-700 truncate">
+                                      {file.file_display_name}
+                                    </p>
+                                    <p className="text-xs sm:text-sm text-gray-500">
+                                      {file.file_type}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  {isImage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePresentImageExisting(file.file_name)}
+                                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                        isPresent
+                                          ? "bg-blue-500 text-white"
+                                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                      }`}
+                                    >
+                                      {isPresent ? "✓ Présentation" : "Présentation"}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExistingFile(file.id)}
+                                    className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded text-sm font-medium transition-colors"
+                                  >
+                                    Supprimer
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Upload Section */}
                     <div className="content-stretch flex flex-col gap-2 sm:gap-3 md:gap-4 items-start w-full">
                       <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
@@ -609,6 +750,21 @@ export default function FormulairePage() {
                     >
                       <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-white whitespace-nowrap">
                         Suivant
+                      </p>
+                    </button>
+                  )}
+                  {currentStep === steps.length && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const form = document.querySelector('form');
+                        form?.requestSubmit();
+                      }}
+                      disabled={formLoading}
+                      className="bg-success content-stretch flex items-center justify-center px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-sm flex-1 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-white whitespace-nowrap">
+                        Sauvegarder
                       </p>
                     </button>
                   )}

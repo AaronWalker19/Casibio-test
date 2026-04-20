@@ -46,14 +46,12 @@ interface GalleryImage {
 }
 
 // Fonction pour formater les dates correctement
-const formatDate = (dateString: string, language: "FR" | "EN"): string => {
+const formatDate = (dateString: string, language: "FR" | "EN" | "fr" | "en"): string => {
   try {
-    // Remplacer l'espace par "T" pour le format ISO si nécessaire
-    const normalizedDate = dateString.includes("T")
-      ? dateString
-      : dateString.replace(" ", "T");
-    return new Date(normalizedDate).toLocaleDateString(
-      language === "FR" ? "fr-FR" : "en-US",
+    const date = parseDate(dateString);
+    const lang = language.toUpperCase() as "FR" | "EN";
+    return date.getTime() === 0 ? dateString : date.toLocaleDateString(
+      lang === "FR" ? "fr-FR" : "en-US",
       {
         year: "numeric",
         month: "long",
@@ -62,6 +60,19 @@ const formatDate = (dateString: string, language: "FR" | "EN"): string => {
     );
   } catch {
     return dateString;
+  }
+};
+
+// Fonction pour parser correctement une date SQLite
+const parseDate = (dateString: string): Date => {
+  try {
+    // Remplacer l'espace par "T" pour le format ISO si nécessaire
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
+    return new Date(normalizedDate);
+  } catch {
+    return new Date(0); // Retourner epoch si parsing échoue
   }
 };
 
@@ -108,6 +119,7 @@ export default function ArticlePage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Récupérer les données du projet
   useEffect(() => {
@@ -171,11 +183,14 @@ export default function ArticlePage() {
     }
   };
 
-  // Fonction pour supprimer l'article
-  const handleDeleteArticle = async () => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer cet article ?`)) {
-      return;
-    }
+  // Fonction pour ouvrir le modal de confirmation
+  const handleDeleteArticle = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  // Fonction pour confirmer la suppression
+  const handleConfirmDelete = async () => {
+    setShowDeleteConfirm(false);
 
     try {
       const token = localStorage.getItem("authToken");
@@ -332,8 +347,8 @@ export default function ArticlePage() {
                 f.file_type?.toLowerCase().startsWith("image/"),
               ).sort(
                 (a, b) =>
-                  new Date(b.created_at).getTime() -
-                  new Date(a.created_at).getTime(),
+                  parseDate(b.created_at).getTime() -
+                  parseDate(a.created_at).getTime(),
               ).length > 0
                 ? projectFiles
                     .filter((f) =>
@@ -341,8 +356,8 @@ export default function ArticlePage() {
                     )
                     .sort(
                       (a, b) =>
-                        new Date(b.created_at).getTime() -
-                        new Date(a.created_at).getTime(),
+                        parseDate(b.created_at).getTime() -
+                        parseDate(a.created_at).getTime(),
                     )[0].file_path
                 : "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"
             }
@@ -699,7 +714,36 @@ export default function ArticlePage() {
         onClose={() => setLightboxOpen(false)}
       />
 
+      {/* Popup de confirmation de suppression */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-50">
+          <div className="bg-white rounded-sm p-6 sm:p-8 max-w-sm mx-4 shadow-lg">
+            <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl text-black mb-4">
+              Confirmation de suppression
+            </p>
+            <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-700 mb-6">
+              Êtes-vous sûr de vouloir supprimer l'article "<span className="font-bold">{language === "FR" ? article?.title_fr : article?.title_en}</span>" ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-3 sm:gap-4">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-gray-200 hover:bg-gray-300 text-black rounded-sm font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-[#c9232c] hover:bg-[#a01f26] text-white rounded-sm font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base transition-colors"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
+    
   );
 }

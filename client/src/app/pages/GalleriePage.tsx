@@ -15,6 +15,20 @@ interface GalleryFile {
   created_at: string;
 }
 
+// Fonction pour formater les dates correctement
+const formatDate = (dateString: string, language: "FR" | "EN"): string => {
+  try {
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
+    return new Date(normalizedDate).toLocaleDateString(
+      language === "FR" ? "fr-FR" : "en-US"
+    );
+  } catch {
+    return dateString;
+  }
+};
+
 export default function GalleriePage() {
   const { language } = useLanguage();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -50,11 +64,16 @@ export default function GalleriePage() {
     setLightboxOpen(true);
   };
 
-  // Filtrer les images par terme de recherche
-  const filteredImages = galleryFiles.filter((file) =>
-    file.file_display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    file.created_at.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrer les images par terme de recherche (images et vidéos uniquement)
+  const filteredImages = galleryFiles
+    .filter((file) => 
+      file.file_type?.toLowerCase().startsWith("image/") ||
+      file.file_type?.toLowerCase().startsWith("video/")
+    )
+    .filter((file) =>
+      file.file_display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      file.created_at.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   // Trier les images
   const sortedImages = [...filteredImages].sort((a, b) => {
@@ -166,7 +185,7 @@ export default function GalleriePage() {
                       key={file.id}
                       id={file.id}
                       title={file.file_display_name}
-                      date={new Date(file.created_at).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US')}
+                      date={formatDate(file.created_at, language)}
                       filePath={file.file_path}
                       fileType={file.file_type}
                       onImageClick={() => handleImageClick(index)}

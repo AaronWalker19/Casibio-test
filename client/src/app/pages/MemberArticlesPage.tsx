@@ -110,10 +110,6 @@ export default function MemberArticlesPage() {
   };
 
   const handleDeleteArticle = async (id: number, title: string) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer "${title}" ?`)) {
-      return;
-    }
-
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {

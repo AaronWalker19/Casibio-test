@@ -28,6 +28,7 @@ interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  language?: "FR" | "EN";
 }
 
 interface Article {
@@ -40,12 +41,16 @@ export default function RichTextEditor({
   value,
   onChange,
   placeholder = "",
+  language,
 }: RichTextEditorProps) {
   const [showLinkPopup, setShowLinkPopup] = useState(false);
   const [showArticleDropdown, setShowArticleDropdown] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [customUrl, setCustomUrl] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<number | null>(null);
+
+  // Déterminer la langue automatiquement si pas fournie
+  const currentLanguage = language || (placeholder === "English" ? "EN" : "FR");
 
   // Récupérer les articles existants
   useEffect(() => {
@@ -90,7 +95,7 @@ export default function RichTextEditor({
 
   // Mettre à jour le contenu de l'éditeur quand la prop value change
   useEffect(() => {
-    if (editor && value) {
+    if (editor && value !== undefined && value !== null) {
       const currentContent = editor.getHTML();
       if (currentContent !== value) {
         editor.commands.setContent(value, false);
@@ -115,7 +120,9 @@ export default function RichTextEditor({
       const article = articles.find((a) => a.id === selectedArticle);
       if (article) {
         const articleUrl = `/articles/${selectedArticle}`;
-        const linkLabel = `${article.title_fr}`;
+        const linkLabel = currentLanguage === "EN" 
+          ? (article.title_en || article.title_fr)
+          : (article.title_fr || article.title_en);
         editor
           .chain()
           .focus()
@@ -152,7 +159,9 @@ export default function RichTextEditor({
       const article = articles.find((a) => a.id === selectedArticle);
       if (article) {
         const articleUrl = `/articles/${selectedArticle}`;
-        const linkLabel = `${article.title_fr}`;
+        const linkLabel = currentLanguage === "EN"
+          ? (article.title_en || article.title_fr)
+          : (article.title_fr || article.title_en);
         editor
           .chain()
           .focus()
@@ -342,7 +351,9 @@ export default function RichTextEditor({
                 <option value="">-- Choisir un article --</option>
                 {articles.map((article) => (
                   <option key={article.id} value={article.id}>
-                    {article.title_fr || article.title_en}
+                    {currentLanguage === "EN"
+                      ? (article.title_en || article.title_fr)
+                      : (article.title_fr || article.title_en)}
                   </option>
                 ))}
               </select>

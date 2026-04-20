@@ -11,6 +11,11 @@ const loginLimiter = rateLimit({
   message: "Trop de tentatives de connexion. Réessayez plus tard.",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({ 
+      error: "Trop de tentatives de connexion. Réessayez plus tard." 
+    });
+  }
 });
 
 // Rate limiter pour l'API (global)
@@ -20,6 +25,11 @@ const apiLimiter = rateLimit({
   message: "Trop de requêtes. Réessayez plus tard.",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({ 
+      error: "Trop de requêtes. Réessayez plus tard." 
+    });
+  }
 });
 
 module.exports = {

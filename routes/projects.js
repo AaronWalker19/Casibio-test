@@ -136,7 +136,7 @@ router.use((req, res, next) => {
 router.post("/", 
   requireDB, 
   authenticateToken, 
-  upload.array("files"),
+  upload.any(),  // ✅ Utiliser upload.any() pour parser les fichiers ET les champs textes du FormData
   [
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
@@ -202,7 +202,10 @@ router.post("/",
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      for (const file of req.files) {
+      // ✅ Filtrer pour ne garder que les fichiers du champ "files"
+      const filesFromField = req.files.filter(file => file.fieldname === 'files');
+      
+      for (const file of filesFromField) {
         const uniqueFileName = generateUniqueFileName(file.originalname);
         const uploadPath = path.join(uploadsDir, uniqueFileName);
         fs.writeFileSync(uploadPath, file.buffer);
@@ -476,6 +479,7 @@ router.put("/:projectId",
   requireDB, 
   authenticateToken,
   validateNumericId('projectId'),
+  upload.any(),  // ✅ Ajouter upload.any() pour parser FormData avec champs textes ET fichiers
   [
     check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
@@ -490,8 +494,16 @@ router.put("/:projectId",
     check('perspectives_en').trim().isLength({ max: 50000 }).optional(),
   ],
   async (req, res) => {
+    // LOG: Voir exactement ce que le serveur reçoit
+    console.log("🔍 [PUT] Données reçues après multer parsing:");
+    console.log("  title_fr:", req.body.title_fr, "| type:", typeof req.body.title_fr);
+    console.log("  title_en:", req.body.title_en, "| type:", typeof req.body.title_en);
+    console.log("  summary_fr:", req.body.summary_fr ? req.body.summary_fr.substring(0, 50) + "..." : "undefined", "| type:", typeof req.body.summary_fr);
+    console.log("  summary_en:", req.body.summary_en ? req.body.summary_en.substring(0, 50) + "..." : "undefined", "| type:", typeof req.body.summary_en);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log("❌ Erreurs de validation:", errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
@@ -510,6 +522,48 @@ router.put("/:projectId",
     } = req.body;
     
     try {
+      // Gérer la suppression des fichiers existants
+      let deletedFileIds = [];
+      if (req.body.deleted_file_ids) {
+        try {
+          deletedFileIds = JSON.parse(req.body.deleted_file_ids);
+          console.log("🗑️  Fichiers à supprimer:", deletedFileIds);
+
+          // Pour chaque fichier à supprimer
+          const getFilesStmt = db.prepare("SELECT id, file_path FROM project_files WHERE id = ? AND project_id = ?");
+          
+          for (const fileId of deletedFileIds) {
+            const file = await getFilesStmt.get(fileId, req.params.projectId);
+            
+            if (file) {
+              // Vérifier la sécurité du chemin
+              if (!validateFilePath(file.file_path, uploadsDir)) {
+                console.warn(`⚠️ Fichier suspect: ${file.file_path}`);
+                continue;
+              }
+
+              // Supprimer le fichier du système
+              const fullFilePath = path.join(uploadsDir, file.file_path);
+              if (fs.existsSync(fullFilePath)) {
+                try {
+                  fs.unlinkSync(fullFilePath);
+                  console.log(`✅ Fichier supprimé: ${fullFilePath}`);
+                } catch (fsErr) {
+                  console.error("❌ Erreur lors de la suppression du fichier:", fsErr);
+                }
+              }
+
+              // Supprimer l'entrée de la base de données
+              const deleteStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
+              await deleteStmt.run(fileId, req.params.projectId);
+              console.log(`✅ Fichier supprimé de la BD: ID ${fileId}`);
+            }
+          }
+        } catch (parseErr) {
+          console.warn("Erreur parsing deleted_file_ids:", parseErr);
+        }
+      }
+
       const sql = `
         UPDATE projects 
         SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, 
@@ -533,6 +587,28 @@ router.put("/:projectId",
         cleanParam(perspectives_en),
         req.params.projectId
       );
+
+      // Traiter les nouveaux fichiers uploadés lors de la mise à jour
+      if (req.files && req.files.length > 0) {
+        const fileSql = `
+          INSERT INTO project_files
+          (project_id, file_path, file_name, file_display_name, file_type)
+          VALUES (?, ?, ?, ?, ?)
+        `;
+
+        const filesFromField = req.files.filter(file => file.fieldname === 'files');
+        
+        for (const file of filesFromField) {
+          const uniqueFileName = generateUniqueFileName(file.originalname);
+          const uploadPath = path.join(uploadsDir, uniqueFileName);
+          fs.writeFileSync(uploadPath, file.buffer);
+          
+          const fileStmt = db.prepare(fileSql);
+          await fileStmt.run(req.params.projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
+          console.log(`✅ Fichier ajouté lors de la mise à jour: ${uploadPath}`);
+        }
+      }
+
       res.json({ message: "Projet modifié avec succès" });
     } catch (err) {
       console.error("Update project error:", err);
