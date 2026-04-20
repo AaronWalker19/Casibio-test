@@ -148,12 +148,20 @@ export default function MemberArticlesPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(date);
+    try {
+      // Normaliser la date SQLite au format ISO
+      const normalizedDate = dateString.includes("T")
+        ? dateString
+        : dateString.replace(" ", "T");
+      const date = new Date(normalizedDate);
+      return new Intl.DateTimeFormat('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(date);
+    } catch {
+      return dateString;
+    }
   };
 
   // Fonction pour vérifier si un article est complet

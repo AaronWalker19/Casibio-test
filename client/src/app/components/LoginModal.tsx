@@ -55,7 +55,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#00000080] " onClick={onClose} />
       
       <div className="relative bg-primary rounded-[8px] shadow-2xl p-[50px] w-full max-w-[500px] mx-[20px]" onClick={(e) => e.stopPropagation()}>
         <button

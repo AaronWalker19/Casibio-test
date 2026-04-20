@@ -39,7 +39,7 @@ export function ArticleCard({ id, title, date, status, description, image, onEdi
       <Link
         to={`/articles/${id}`}
         onClick={handleViewClick}
-        className="bg-primary flex flex-col items-center relative rounded-sm w-full sm:w-72 md:w-80 lg:w-96 hover:opacity-90 transition-opacity cursor-pointer"
+        className="bg-primary flex flex-col items-center relative rounded-sm w-full sm:w-72 md:w-80 lg:w-auto lg:min-w-96 hover:opacity-90 transition-opacity cursor-pointer"
         data-name="article"
       >
         {/* Boutons d'édition et suppression pour les membres */}

@@ -329,7 +329,7 @@ router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req,
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
 router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path FROM project_files WHERE project_id = ? ORDER BY created_at");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
     const filesWithUrls = rows.map(row => ({
       ...row,

@@ -46,11 +46,24 @@ interface GalleryImage {
 }
 
 // Fonction pour formater les dates correctement
-const formatDate = (dateString: string, language: "FR" | "EN" | "fr" | "en"): string => {
+const formatDate = (dateString: string | null | undefined, language: "FR" | "EN" | "fr" | "en"): string => {
+  if (!dateString) {
+    return "";
+  }
   try {
-    const date = parseDate(dateString);
+    // Normaliser la date SQLite au format ISO
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
     const lang = language.toUpperCase() as "FR" | "EN";
-    return date.getTime() === 0 ? dateString : date.toLocaleDateString(
+    const date = new Date(normalizedDate);
+    
+    // Vérifier si la date est valide
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+    
+    return date.toLocaleDateString(
       lang === "FR" ? "fr-FR" : "en-US",
       {
         year: "numeric",
@@ -59,7 +72,7 @@ const formatDate = (dateString: string, language: "FR" | "EN" | "fr" | "en"): st
       },
     );
   } catch {
-    return dateString;
+    return dateString || "";
   }
 };
 
@@ -72,7 +85,7 @@ const parseDate = (dateString: string): Date => {
       : dateString.replace(" ", "T");
     return new Date(normalizedDate);
   } catch {
-    return new Date(0); // Retourner epoch si parsing échoue
+    return new Date(); // Retourner la date actuelle en cas d'erreur au lieu d'epoch
   }
 };
 

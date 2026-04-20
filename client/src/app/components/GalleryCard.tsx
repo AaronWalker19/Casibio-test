@@ -14,7 +14,7 @@ export function GalleryCard({ title, date, filePath, fileType, onImageClick }: G
 
   return (
     <div
-      className="relative group cursor-pointer overflow-hidden rounded-[4px] max-w-[30rem] max-h-[30rem]"
+      className="relative group cursor-pointer overflow-hidden rounded-[4px] max-w-[60rem] max-h-[30rem]"
       onClick={onImageClick}
       role="button"
       tabIndex={0}

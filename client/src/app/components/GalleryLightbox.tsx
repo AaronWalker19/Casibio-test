@@ -53,7 +53,7 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose }: Galler
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-50"
       onClick={onClose}
       onKeyDown={handleKeyDown}
       role="dialog"
