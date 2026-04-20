@@ -25,7 +25,6 @@ interface Article {
   results_en: string | null;
   perspectives_fr: string | null;
   perspectives_en: string | null;
-  code_anr?: string;
   first_content_fr?: string | null;
   first_content_en?: string | null;
   contents?: Array<{

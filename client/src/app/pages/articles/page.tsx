@@ -18,7 +18,6 @@ interface Article {
   results_en: string | null;
   perspectives_fr: string | null;
   perspectives_en: string | null;
-  code_anr?: string;
   first_content_fr?: string | null;
   first_content_en?: string | null;
   contents?: Array<{
@@ -52,15 +51,6 @@ export default function ArticlesPage() {
           throw new Error(language === 'FR' ? "Erreur lors du chargement des articles" : "Error loading articles");
         }
         const data = await response.json();
-        
-        console.log("=== ARTICLES RÉCUPÉRÉS ===");
-        console.log("Nombre d'articles:", data.length);
-        if (data.length > 0) {
-          console.log("Premier article:", data[0]);
-          console.log("- Contenu FR:", data[0].first_content_fr);
-          console.log("- Contenu EN:", data[0].first_content_en);
-          console.log("- Contenus array:", data[0].contents);
-        }
         
         // Sauvegarder uniquement les articles, pas enrichis
         setArticles(data);

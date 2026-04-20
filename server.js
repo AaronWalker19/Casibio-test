@@ -301,14 +301,13 @@ async function startServer() {
 
       // ===== AFFICHER LES PROJETS =====
       try {
-        const projectsStmt = db.prepare("SELECT id, code_anr, title_fr, title_en FROM projects ORDER BY created_at DESC LIMIT 50");
+        const projectsStmt = db.prepare("SELECT id, title_fr, title_en FROM projects ORDER BY created_at DESC LIMIT 50");
         const projects = await projectsStmt.all();
         console.log("\n📚 PROJETS :");
         console.log("═".repeat(70));
         if (projects.length > 0) {
           projects.forEach(project => {
-            const code = project.code_anr || "N/A";
-            console.log(`  📌 [${code.padEnd(15)}] ${project.title_fr}`);
+            console.log(`  📌 ${project.title_fr}`);
             console.log(`     └─ ${project.title_en}`);
           });
         } else {

@@ -14,7 +14,6 @@ interface Article {
   summary_fr: string;
   summary_en: string;
   created_at: string;
-  code_anr?: string;
   image?: string;
   methods_fr?: string;
   methods_en?: string;
@@ -74,15 +73,6 @@ export default function MemberArticlesPage() {
       }
 
       const data = await response.json();
-      
-      console.log("=== MEMBER ARTICLES PAGE ===");
-      console.log("Nombre d'articles:", data.length);
-      if (data.length > 0) {
-        console.log("Premier article:", data[0]);
-        console.log("- first_content_fr:", data[0].first_content_fr);
-        console.log("- first_content_en:", data[0].first_content_en);
-        console.log("- contents:", data[0].contents);
-      }
       
       setArticles(data);
       setError("");
@@ -184,46 +174,14 @@ export default function MemberArticlesPage() {
     }
   };
 
-  // Fonction pour vérifier si un article est complet
-  const isArticleComplete = (article: Article): boolean => {
-    // Si l'article a des contenus, il est complet s'il n'a pas de contenus vides
-    if (article.contents && article.contents.length > 0) {
-      return !article.contents.some(content => 
-        !content.content_fr?.trim() || !content.content_en?.trim()
-      );
-    }
-    
-    // Fallback pour les anciens articles : vérifier les champs statiques
-    return !!(
-      article.title_fr?.trim() &&
-      article.title_en?.trim() &&
-      article.summary_fr?.trim() &&
-      article.summary_en?.trim() &&
-      article.methods_fr?.trim() &&
-      article.methods_en?.trim() &&
-      article.results_fr?.trim() &&
-      article.results_en?.trim() &&
-      article.perspectives_fr?.trim() &&
-      article.perspectives_en?.trim()
-    );
-  };
-
   // Fonction pour filtrer les articles
   const getFilteredArticles = () => {
     let filtered = articles.filter((article) => {
       const matchesSearch = searchTerm === "" || 
         article.title_fr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.title_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.summary_fr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.summary_en.toLowerCase().includes(searchTerm.toLowerCase());
+        article.title_en.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Filtre par statut - vérifier si l'article est complété ou non
-      const isComplete = isArticleComplete(article);
-      const matchesStatus = filterStatus === "tous" || 
-        (filterStatus === "completed" && isComplete) ||
-        (filterStatus === "in_progress" && !isComplete);
-      
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
 
     // Tri par date

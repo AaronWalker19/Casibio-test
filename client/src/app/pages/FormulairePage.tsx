@@ -7,6 +7,15 @@ import { useLanguage } from "../../contexts/LanguageContext.tsx";
 import { t } from "../../contexts/translations.tsx";
 import RichTextEditor from "../components/RichTextEditor.tsx";
 
+interface ContentBlock {
+  id?: number;
+  position: number;
+  title_fr: string;
+  title_en: string;
+  content_fr: string;
+  content_en: string;
+}
+
 export default function FormulairePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,39 +29,31 @@ export default function FormulairePage() {
   const [presentImageFile, setPresentImageFile] = useState<string | null>(null);
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
+  const [expandedContent, setExpandedContent] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
-    resumeFr: "",
-    resumeEn: "",
-    methodsFr: "",
-    methodsEn: "",
-    resultsFr: "",
-    resultsEn: "",
-    perspectivesFr: "",
-    perspectivesEn: "",
+    contents: [] as ContentBlock[],
   });
 
-  // Véérifier si on est en mode édition et pré-remplir les données
+  // Vérifier si on est en mode édition et pré-remplir les données
   useEffect(() => {
     const state = location.state as any;
     if (state?.editingArticle) {
       const article = state.editingArticle;
-      console.log("📋 Édition d'article détecté:", article);
       setEditingArticleId(article.id);
       const newFormData = {
         titreFr: article.title_fr || "",
         titreEn: article.title_en || "",
-        resumeFr: article.summary_fr || "",
-        resumeEn: article.summary_en || "",
-        methodsFr: article.methods_fr || "",
-        methodsEn: article.methods_en || "",
-        resultsFr: article.results_fr || "",
-        resultsEn: article.results_en || "",
-        perspectivesFr: article.perspectives_fr || "",
-        perspectivesEn: article.perspectives_en || "",
+        contents: (article.contents || []).map((content: any) => ({
+          id: content.id,
+          position: content.position,
+          title_fr: content.title_fr || "",
+          title_en: content.title_en || "",
+          content_fr: content.content_fr || "",
+          content_en: content.content_en || "",
+        })),
       };
-      console.log("📝 FormData pré-rempli:", newFormData);
       setFormData(newFormData);
 
       // Récupérer les fichiers liés à l'article
@@ -71,7 +72,6 @@ export default function FormulairePage() {
 
           if (response.ok) {
             const filesData = await response.json();
-            console.log("📁 Fichiers récupérés:", filesData);
             setExistingFiles(Array.isArray(filesData) ? filesData : filesData.files || []);
           } else {
             console.warn("Impossible de récupérer les fichiers");
@@ -120,19 +120,41 @@ export default function FormulairePage() {
   }
   
   const steps = [
-    { number: 1, title: "Titre et Résumé", key: "titleResume" },
-    { number: 2, title: "Méthodes", key: "methods" },
-    { number: 3, title: "Résultats", key: "results" },
-    { number: 4, title: "Perspectives", key: "perspectives" },
-    { number: 5, title: "Fichiers et Image", key: "files" },
+    { number: 1, title: "Titre et Contenu", key: "content" },
+    { number: 2, title: "Fichiers et Image", key: "files" },
   ];
 
-  // Fonction pour vérifier si le contenu HTML (de Quill) est vide
-  const isHtmlEmpty = (html: string): boolean => {
-    if (!html || !html.trim()) return true;
-    // React Quill peut retourner <p><br></p> ou similaraire pour un champ vide
-    const stripped = html.replace(/<[^>]*>/g, "").trim();
-    return stripped.length === 0;
+  // Ajouter une nouvelle zone titre/contenu
+  const addContent = () => {
+    const newContent: ContentBlock = {
+      position: formData.contents.length + 1,
+      title_fr: "",
+      title_en: "",
+      content_fr: "",
+      content_en: "",
+    };
+    setFormData({
+      ...formData,
+      contents: [...formData.contents, newContent],
+    });
+  };
+
+  // Supprimer une zone titre/contenu
+  const removeContent = (index: number) => {
+    setFormData({
+      ...formData,
+      contents: formData.contents.filter((_, i) => i !== index),
+    });
+  };
+
+  // Mettre à jour une zone titre/contenu
+  const updateContent = (index: number, updates: Partial<ContentBlock>) => {
+    const newContents = [...formData.contents];
+    newContents[index] = { ...newContents[index], ...updates };
+    setFormData({
+      ...formData,
+      contents: newContents,
+    });
   };
 
   // Gestion de l'upload de fichiers
@@ -195,10 +217,9 @@ export default function FormulairePage() {
 
   const validateStep = (step: number): boolean => {
     if (step === 1) {
-      // Titre et résumé obligatoires
-      if (!formData.titreFr.trim() || !formData.titreEn.trim() || 
-          isHtmlEmpty(formData.resumeFr) || isHtmlEmpty(formData.resumeEn)) {
-        setError("Le titre et le résumé sont obligatoires (FR et EN)");
+      // Titre obligatoire
+      if (!formData.titreFr.trim() || !formData.titreEn.trim()) {
+        setError("Le titre est obligatoire (FR et EN)");
         return false;
       }
     }
@@ -206,13 +227,19 @@ export default function FormulairePage() {
     return true;
   };
 
-  // ✅ Vérifier si les champs obligatoires (étape 1) sont remplis
+  // Vérifier si on a au minimum une section ou un fichier
+  const hasMinimumContent = () => {
+    const hasContent = formData.contents.length > 0;
+    const hasFiles = uploadedFiles.length > 0 || existingFiles.length > 0;
+    return hasContent || hasFiles;
+  };
+
+  // ✅ Vérifier si les champs obligatoires sont remplis ET au minimum une section ou un fichier
   const canSubmit = () => {
     return (
       formData.titreFr.trim() &&
       formData.titreEn.trim() &&
-      !isHtmlEmpty(formData.resumeFr) &&
-      !isHtmlEmpty(formData.resumeEn) &&
+      hasMinimumContent() &&
       !formLoading
     );
   };
@@ -234,14 +261,17 @@ export default function FormulairePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✅ Vérifier les champs obligatoires avant de soumettre
+    // ✅ Vérifier les champs obligatoires et le contenu minimum avant de soumettre
     if (!validateStep(1)) return;
+    
+    if (!hasMinimumContent()) {
+      setError("Vous devez avoir au minimum une section de contenu ou un fichier pour sauvegarder");
+      return;
+    }
 
     setFormLoading(true);
     try {
       const token = localStorage.getItem('authToken');
-      console.log("Token trouvé:", token ? "OUI" : "NON");
-      console.log("isAuthenticated:", isAuthenticated);
       
       if (!token) {
         setError("Token d'authentification manquant. Reconnectez-vous SVP.");
@@ -253,21 +283,9 @@ export default function FormulairePage() {
       const formDataToSend = new FormData();
       formDataToSend.append("title_fr", formData.titreFr);
       formDataToSend.append("title_en", formData.titreEn);
-      formDataToSend.append("summary_fr", formData.resumeFr);
-      formDataToSend.append("summary_en", formData.resumeEn);
-      formDataToSend.append("methods_fr", formData.methodsFr);
-      formDataToSend.append("methods_en", formData.methodsEn);
-      formDataToSend.append("results_fr", formData.resultsFr);
-      formDataToSend.append("results_en", formData.resultsEn);
-      formDataToSend.append("perspectives_fr", formData.perspectivesFr);
-      formDataToSend.append("perspectives_en", formData.perspectivesEn);
       
-      // LOG: Voir quelles données sont envoyées
-      console.log("🚀 Données à envoyer:");
-      console.log("  title_fr:", formData.titreFr);
-      console.log("  title_en:", formData.titreEn);
-      console.log("  summary_fr:", formData.resumeFr);
-      console.log("  summary_en:", formData.resumeEn);
+      // Ajouter les contenus
+      formDataToSend.append("contents", JSON.stringify(formData.contents));
       
       // Ajouter les fichiers uploadés
       uploadedFiles.forEach((file) => {
@@ -282,7 +300,6 @@ export default function FormulairePage() {
       // Ajouter les IDs des fichiers à supprimer
       if (deletedFileIds.length > 0) {
         formDataToSend.append("deleted_file_ids", JSON.stringify(deletedFileIds));
-        console.log("🗑️  Fichiers à supprimer:", deletedFileIds);
       }
 
       // Déterminer si c'est une création ou une modification
@@ -299,8 +316,6 @@ export default function FormulairePage() {
         },
         body: formDataToSend,
       });
-
-      console.log("Réponse status:", response.status);
       
       let responseData;
       const contentType = response.headers.get('content-type');
@@ -311,11 +326,8 @@ export default function FormulairePage() {
       } else {
         // Sinon, lire comme texte
         const text = await response.text();
-        console.log("Réponse texte brut:", text);
         responseData = { text };
       }
-      
-      console.log("Réponse data:", responseData);
 
       if (!response.ok) {
         const errorMessage = responseData.error || responseData.text || JSON.stringify(responseData.errors) || "Erreur lors de la sauvegarde";
@@ -421,9 +433,10 @@ export default function FormulairePage() {
                   </div>
                 )}
 
-                {/* Step 1: Titre et Résumé */}
+                {/* Step 1: Titre et Contenu */}
                 {currentStep === 1 && (
                   <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
+                    {/* Titre Principal */}
                     <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
                       <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
                         <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
@@ -460,117 +473,127 @@ export default function FormulairePage() {
                         />
                       </div>
                     </div>
-                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
-                          Résumé <span className="text-red-500">*</span>
-                        </label>
-                        <RichTextEditor
-                          value={formData.resumeFr}
-                          onChange={(value) => setFormData({ ...formData, resumeFr: value })}
-                          placeholder="Français"
-                        />
-                      </div>
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
-                          .
-                        </label>
-                        <RichTextEditor
-                          value={formData.resumeEn}
-                          onChange={(value) => setFormData({ ...formData, resumeEn: value })}
-                          placeholder="English"
-                        />
-                      </div>
+
+                    {/* Zones de Contenu avec Accordéons */}
+                    <div className="content-stretch flex flex-col gap-3 sm:gap-4 md:gap-5 items-start w-full mt-4">
+                      <h3 className="font-['Inter:Bold',sans-serif] font-bold text-base sm:text-lg md:text-xl text-black">
+                        Sections du contenu
+                      </h3>
+                      
+                      {formData.contents.length === 0 ? (
+                        <div className="bg-gray-50 p-4 sm:p-5 md:p-6 rounded-sm w-full text-center">
+                          <p className="text-gray-500 text-sm sm:text-base">
+                            Aucune section pour le moment. Cliquez sur le bouton ci-dessous pour en ajouter une.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="w-full space-y-2">
+                          {formData.contents.map((content, index) => (
+                            <div key={index} className="bg-white border-2 border-gray-200 rounded-sm overflow-hidden">
+                              {/* Accordéon Header */}
+                              <button
+                                type="button"
+                                onClick={() => setExpandedContent(expandedContent === index ? null : index)}
+                                className="w-full px-4 sm:px-5 md:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="flex-1 text-left">
+                                  <p className="font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base text-black">
+                                    {content.title_fr || content.title_en || `Section ${index + 1}`}
+                                  </p>
+                                </div>
+                                <div className={`transform transition-transform ${expandedContent === index ? 'rotate-180' : ''}`}>
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                  </svg>
+                                </div>
+                              </button>
+
+                              {/* Accordéon Content */}
+                              {expandedContent === index && (
+                                <div className="border-t-2 border-gray-200 p-4 sm:p-5 md:p-6 bg-gray-50">
+                                  <div className="space-y-4">
+                                    {/* Titres */}
+                                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
+                                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
+                                        <label className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-black w-full">
+                                          Titre FR
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={content.title_fr}
+                                          onChange={(e) => updateContent(index, { title_fr: e.target.value })}
+                                          placeholder="Titre en français"
+                                          className="bg-white border-gray-50 border-2 content-stretch flex items-center p-3 sm:p-4 md:p-5 rounded-sm w-full font-['Inter:Regular',sans-serif] font-normal text-sm text-black placeholder:text-gray-300"
+                                        />
+                                      </div>
+                                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
+                                        <label className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-black w-full">
+                                          Titre EN
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={content.title_en}
+                                          onChange={(e) => updateContent(index, { title_en: e.target.value })}
+                                          placeholder="Title in English"
+                                          className="bg-white border-gray-50 border-2 content-stretch flex items-center p-3 sm:p-4 md:p-5 rounded-sm w-full font-['Inter:Regular',sans-serif] font-normal text-sm text-black placeholder:text-gray-300"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Contenus */}
+                                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
+                                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
+                                        <label className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-black w-full">
+                                          Contenu FR
+                                        </label>
+                                        <RichTextEditor
+                                          value={content.content_fr}
+                                          onChange={(value) => updateContent(index, { content_fr: value })}
+                                          placeholder="Contenu en français"
+                                        />
+                                      </div>
+                                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
+                                        <label className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-black w-full">
+                                          Contenu EN
+                                        </label>
+                                        <RichTextEditor
+                                          value={content.content_en}
+                                          onChange={(value) => updateContent(index, { content_en: value })}
+                                          placeholder="Content in English"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Bouton Supprimer */}
+                                    <button
+                                      type="button"
+                                      onClick={() => removeContent(index)}
+                                      className="bg-red-100 hover:bg-red-200 text-red-600 px-4 sm:px-5 md:px-6 py-2 sm:py-3 rounded-sm text-sm sm:text-base font-medium transition-colors"
+                                    >
+                                      Supprimer cette section
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Bouton Ajouter */}
+                      <button
+                        type="button"
+                        onClick={addContent}
+                        className="bg-primary text-white px-4 sm:px-5 md:px-6 py-2 sm:py-3 rounded-sm text-sm sm:text-base font-medium hover:opacity-90 transition-opacity w-full sm:w-auto"
+                      >
+                        + Ajouter une section
+                      </button>
                     </div>
                   </div>
                 )}
 
-                {/* Step 2: Méthodes */}
+                {/* Step 2: Fichiers et Image de présentation */}
                 {currentStep === 2 && (
-                  <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
-                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
-                          Méthodes
-                        </label>
-                        <RichTextEditor
-                          value={formData.methodsFr}
-                          onChange={(value) => setFormData({ ...formData, methodsFr: value })}
-                          placeholder="Français"
-                        />
-                      </div>
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
-                          .
-                        </label>
-                        <RichTextEditor
-                          value={formData.methodsEn}
-                          onChange={(value) => setFormData({ ...formData, methodsEn: value })}
-                          placeholder="English"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Résultats */}
-                {currentStep === 3 && (
-                  <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
-                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
-                          Résultats
-                        </label>
-                        <RichTextEditor
-                          value={formData.resultsFr}
-                          onChange={(value) => setFormData({ ...formData, resultsFr: value })}
-                          placeholder="Français"
-                        />
-                      </div>
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
-                          .
-                        </label>
-                        <RichTextEditor
-                          value={formData.resultsEn}
-                          onChange={(value) => setFormData({ ...formData, resultsEn: value })}
-                          placeholder="English"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 4: Perspectives */}
-                {currentStep === 4 && (
-                  <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
-                    <div className="content-stretch flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start relative shrink-0 w-full">
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-black w-full">
-                          Perspectives
-                        </label>
-                        <RichTextEditor
-                          value={formData.perspectivesFr}
-                          onChange={(value) => setFormData({ ...formData, perspectivesFr: value })}
-                          placeholder="Français"
-                        />
-                      </div>
-                      <div className="content-stretch flex flex-col flex-1 gap-2 sm:gap-3 md:gap-4 items-start relative w-full sm:w-auto">
-                        <label className="font-['Inter:Regular',sans-serif] font-normal text-base sm:text-lg md:text-xl text-transparent w-full">
-                          .
-                        </label>
-                        <RichTextEditor
-                          value={formData.perspectivesEn}
-                          onChange={(value) => setFormData({ ...formData, perspectivesEn: value })}
-                          placeholder="English"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 5: Fichiers et Image de présentation */}
-                {currentStep === 5 && (
                   <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full">
                     {/* Existing Files Section */}
                     {existingFiles.length > 0 && (

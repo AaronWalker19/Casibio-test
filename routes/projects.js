@@ -136,19 +136,10 @@ router.use((req, res, next) => {
 router.post("/", 
   requireDB, 
   authenticateToken, 
-  upload.any(),  // ✅ Utiliser upload.any() pour parser les fichiers ET les champs textes du FormData
+  upload.any(),
   [
-    check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 50000 }).notEmpty(),
-    check('summary_en').trim().isLength({ max: 50000 }).notEmpty(),
-    check('methods_fr').trim().isLength({ max: 50000 }).optional(),
-    check('methods_en').trim().isLength({ max: 50000 }).optional(),
-    check('results_fr').trim().isLength({ max: 50000 }).optional(),
-    check('results_en').trim().isLength({ max: 50000 }).optional(),
-    check('perspectives_fr').trim().isLength({ max: 50000 }).optional(),
-    check('perspectives_en').trim().isLength({ max: 50000 }).optional(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -157,72 +148,89 @@ router.post("/",
     }
 
     const {
-      code_anr,
       title_fr,
       title_en,
-      summary_fr,
-      summary_en,
-      methods_fr,
-      methods_en,
-      results_fr,
-      results_en,
-      perspectives_fr,
-      perspectives_en
+      contents: contentsJson
     } = req.body;
 
     try {
-    const sql = `
-      INSERT INTO projects
-      (code_anr, title_fr, title_en, summary_fr, summary_en, methods_fr, methods_en, results_fr, results_en, perspectives_fr, perspectives_en, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+      // Parser les contenus s'ils sont envoyés comme JSON string
+      let contents = [];
+      if (contentsJson) {
+        try {
+          contents = typeof contentsJson === 'string' ? JSON.parse(contentsJson) : contentsJson;
+        } catch (e) {
+          console.error("Erreur parsing contents:", e);
+          contents = [];
+        }
+      }
 
-    const stmt = db.prepare(sql);
-    const result = await stmt.run(
-      cleanParam(code_anr),
-      cleanParam(title_fr),
-      cleanParam(title_en),
-      cleanParam(summary_fr),
-      cleanParam(summary_en),
-      cleanParam(methods_fr),
-      cleanParam(methods_en),
-      cleanParam(results_fr),
-      cleanParam(results_en),
-      cleanParam(perspectives_fr),
-      cleanParam(perspectives_en),
-      req.user.userId
-    );
-    const projectId = result.lastInsertRowid;
-
-    // Save files to uploads directory and insert paths into database
-    if (req.files && req.files.length > 0) {
-      const fileSql = `
-        INSERT INTO project_files
-        (project_id, file_path, file_name, file_display_name, file_type)
-        VALUES (?, ?, ?, ?, ?)
+      // Créer le projet
+      const sql = `
+        INSERT INTO projects
+        (title_fr, title_en, created_by)
+        VALUES (?, ?, ?)
       `;
 
-      // ✅ Filtrer pour ne garder que les fichiers du champ "files"
-      const filesFromField = req.files.filter(file => file.fieldname === 'files');
-      
-      for (const file of filesFromField) {
-        const uniqueFileName = generateUniqueFileName(file.originalname);
-        const uploadPath = path.join(uploadsDir, uniqueFileName);
-        fs.writeFileSync(uploadPath, file.buffer);
-        
-        const fileStmt = db.prepare(fileSql);
-        // Stocker seulement le nom du fichier, pas le chemin complet
-        await fileStmt.run(projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
-        console.log(`Fichier sauvegardé: ${uploadPath}`);
-      }
-    }
+      const stmt = db.prepare(sql);
+      const result = await stmt.run(
+        cleanParam(title_fr),
+        cleanParam(title_en),
+        req.user.userId
+      );
+      const projectId = result.lastInsertRowid;
+      console.log(`Projet créé: ${projectId}`);
 
-    res.json({ id: projectId, message: "Projet créé avec succès" });
-  } catch (err) {
-    console.error("Create project error:", err);
-    return res.status(500).json({ error: "Erreur lors de la création du projet" });
+      // Insérer les contenus
+      if (contents && Array.isArray(contents) && contents.length > 0) {
+        const contentSql = `
+          INSERT INTO project_contents
+          (project_id, title_fr, title_en, content_fr, content_en, position)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        
+        for (const content of contents) {
+          const contentStmt = db.prepare(contentSql);
+          await contentStmt.run(
+            projectId,
+            cleanParam(content.title_fr),
+            cleanParam(content.title_en),
+            sanitizeContent(content.content_fr),
+            sanitizeContent(content.content_en),
+            content.position || 1
+          );
+        }
+        console.log(`${contents.length} contenus insérés`);
+      }
+
+      // Sauvegarder les fichiers
+      if (req.files && req.files.length > 0) {
+        const fileSql = `
+          INSERT INTO project_files
+          (project_id, file_path, file_name, file_display_name, file_type)
+          VALUES (?, ?, ?, ?, ?)
+        `;
+
+        const filesFromField = req.files.filter(file => file.fieldname === 'files');
+        
+        for (const file of filesFromField) {
+          const uniqueFileName = generateUniqueFileName(file.originalname);
+          const uploadPath = path.join(uploadsDir, uniqueFileName);
+          fs.writeFileSync(uploadPath, file.buffer);
+          
+          const fileStmt = db.prepare(fileSql);
+          await fileStmt.run(projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
+          console.log(`Fichier sauvegardé: ${uploadPath}`);
+        }
+      }
+
+      res.json({ id: projectId, message: "Projet créé avec succès" });
+    } catch (err) {
+      console.error("Create project error:", err);
+      return res.status(500).json({ error: err.message || "Erreur lors de la création du projet" });
+    }
   }
-});
+);
 
 // UPLOAD FILES TO EXISTING PROJECT - POST /api/projects/:projectId/upload
 router.post("/:projectId/upload", 
@@ -514,27 +522,16 @@ router.put("/:projectId",
   requireDB, 
   authenticateToken,
   validateNumericId('projectId'),
-  upload.any(),  // ✅ Ajouter upload.any() pour parser FormData avec champs textes ET fichiers
+  upload.any(),
   [
-    check('code_anr').trim().isLength({ max: 100 }).optional(),
     check('title_fr').trim().isLength({ max: 255 }).notEmpty(),
     check('title_en').trim().isLength({ max: 255 }).notEmpty(),
-    check('summary_fr').trim().isLength({ max: 50000 }).notEmpty(),
-    check('summary_en').trim().isLength({ max: 50000 }).notEmpty(),
-    check('methods_fr').trim().isLength({ max: 50000 }).optional(),
-    check('methods_en').trim().isLength({ max: 50000 }).optional(),
-    check('results_fr').trim().isLength({ max: 50000 }).optional(),
-    check('results_en').trim().isLength({ max: 50000 }).optional(),
-    check('perspectives_fr').trim().isLength({ max: 50000 }).optional(),
-    check('perspectives_en').trim().isLength({ max: 50000 }).optional(),
   ],
   async (req, res) => {
-    // LOG: Voir exactement ce que le serveur reçoit
-    console.log("🔍 [PUT] Données reçues après multer parsing:");
-    console.log("  title_fr:", req.body.title_fr, "| type:", typeof req.body.title_fr);
-    console.log("  title_en:", req.body.title_en, "| type:", typeof req.body.title_en);
-    console.log("  summary_fr:", req.body.summary_fr ? req.body.summary_fr.substring(0, 50) + "..." : "undefined", "| type:", typeof req.body.summary_fr);
-    console.log("  summary_en:", req.body.summary_en ? req.body.summary_en.substring(0, 50) + "..." : "undefined", "| type:", typeof req.body.summary_en);
+    console.log("🔍 [PUT] Données reçues:");
+    console.log("  title_fr:", req.body.title_fr);
+    console.log("  title_en:", req.body.title_en);
+    console.log("  contents:", req.body.contents ? "présent" : "absent");
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -543,20 +540,23 @@ router.put("/:projectId",
     }
 
     const { 
-      code_anr, 
       title_fr, 
-      title_en, 
-      summary_fr, 
-      summary_en,
-      methods_fr,
-      methods_en,
-      results_fr,
-      results_en,
-      perspectives_fr,
-      perspectives_en
+      title_en,
+      contents: contentsJson
     } = req.body;
     
     try {
+      // Parser les contenus s'ils sont envoyés comme JSON string
+      let contents = [];
+      if (contentsJson) {
+        try {
+          contents = typeof contentsJson === 'string' ? JSON.parse(contentsJson) : contentsJson;
+        } catch (e) {
+          console.error("Erreur parsing contents:", e);
+          contents = [];
+        }
+      }
+
       // Gérer la suppression des fichiers existants
       let deletedFileIds = [];
       if (req.body.deleted_file_ids) {
@@ -564,20 +564,17 @@ router.put("/:projectId",
           deletedFileIds = JSON.parse(req.body.deleted_file_ids);
           console.log("🗑️  Fichiers à supprimer:", deletedFileIds);
 
-          // Pour chaque fichier à supprimer
           const getFilesStmt = db.prepare("SELECT id, file_path FROM project_files WHERE id = ? AND project_id = ?");
           
           for (const fileId of deletedFileIds) {
             const file = await getFilesStmt.get(fileId, req.params.projectId);
             
             if (file) {
-              // Vérifier la sécurité du chemin
               if (!validateFilePath(file.file_path, uploadsDir)) {
                 console.warn(`⚠️ Fichier suspect: ${file.file_path}`);
                 continue;
               }
 
-              // Supprimer le fichier du système
               const fullFilePath = path.join(uploadsDir, file.file_path);
               if (fs.existsSync(fullFilePath)) {
                 try {
@@ -588,7 +585,6 @@ router.put("/:projectId",
                 }
               }
 
-              // Supprimer l'entrée de la base de données
               const deleteStmt = db.prepare("DELETE FROM project_files WHERE id = ? AND project_id = ?");
               await deleteStmt.run(fileId, req.params.projectId);
               console.log(`✅ Fichier supprimé de la BD: ID ${fileId}`);
@@ -599,31 +595,49 @@ router.put("/:projectId",
         }
       }
 
+      // Mettre à jour le projet (titre)
       const sql = `
         UPDATE projects 
-        SET code_anr = ?, title_fr = ?, title_en = ?, summary_fr = ?, summary_en = ?, 
-            methods_fr = ?, methods_en = ?, results_fr = ?, results_en = ?, 
-            perspectives_fr = ?, perspectives_en = ?, updated_at = CURRENT_TIMESTAMP
+        SET title_fr = ?, title_en = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
 
       const stmt = db.prepare(sql);
       await stmt.run(
-        cleanParam(code_anr),
         cleanParam(title_fr),
         cleanParam(title_en),
-        cleanParam(summary_fr),
-        cleanParam(summary_en),
-        cleanParam(methods_fr),
-        cleanParam(methods_en),
-        cleanParam(results_fr),
-        cleanParam(results_en),
-        cleanParam(perspectives_fr),
-        cleanParam(perspectives_en),
         req.params.projectId
       );
+      console.log(`✅ Projet ${req.params.projectId} mis à jour`);
 
-      // Traiter les nouveaux fichiers uploadés lors de la mise à jour
+      // Supprimer les anciens contenus
+      const deleteContentStmt = db.prepare("DELETE FROM project_contents WHERE project_id = ?");
+      await deleteContentStmt.run(req.params.projectId);
+      console.log(`✅ Anciens contenus supprimés`);
+
+      // Insérer les nouveaux contenus
+      if (contents && Array.isArray(contents) && contents.length > 0) {
+        const contentSql = `
+          INSERT INTO project_contents
+          (project_id, title_fr, title_en, content_fr, content_en, position)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        
+        for (const content of contents) {
+          const contentStmt = db.prepare(contentSql);
+          await contentStmt.run(
+            req.params.projectId,
+            cleanParam(content.title_fr),
+            cleanParam(content.title_en),
+            sanitizeContent(content.content_fr),
+            sanitizeContent(content.content_en),
+            content.position || 1
+          );
+        }
+        console.log(`✅ ${contents.length} nouveaux contenus insérés`);
+      }
+
+      // Ajouter les nouveaux fichiers uploadés
       if (req.files && req.files.length > 0) {
         const fileSql = `
           INSERT INTO project_files
@@ -647,7 +661,7 @@ router.put("/:projectId",
       res.json({ message: "Projet modifié avec succès" });
     } catch (err) {
       console.error("Update project error:", err);
-      return res.status(500).json({ error: "Erreur lors de la modification" });
+      return res.status(500).json({ error: err.message || "Erreur lors de la modification" });
     }
   }
 );

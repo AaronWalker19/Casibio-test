@@ -20,7 +20,6 @@ if (
 
 interface Article {
   id: number;
-  code_anr: string;
   title_fr: string;
   title_en: string;
   created_at: string;
@@ -132,12 +131,6 @@ export default function ArticlePage() {
           throw new Error(t(language, "erreurChargementArticles"));
         }
         const data = await response.json();
-
-        console.log("=== ARTICLE INDIVIDUEL ===");
-        console.log("Article ID:", id);
-        console.log("Article data:", data);
-        console.log("- Contenus array:", data.contents);
-        console.log("- Nombre de contenus:", data.contents?.length);
 
         setArticle(data);
       } catch (err) {
@@ -264,36 +257,7 @@ export default function ArticlePage() {
           ),
         }))
         .filter(section => section.content) // Filtrer les sections vides
-    : [
-        {
-          id: "resume",
-          title: t(language, "resume"),
-          content: getContent(
-            language === "FR" ? article.summary_fr : article.summary_en,
-          ),
-        },
-        {
-          id: "methodes",
-          title: t(language, "methodes"),
-          content: getContent(
-            language === "FR" ? article.methods_fr : article.methods_en,
-          ),
-        },
-        {
-          id: "resultats",
-          title: t(language, "resultats"),
-          content: getContent(
-            language === "FR" ? article.results_fr : article.results_en,
-          ),
-        },
-        {
-          id: "perspectives",
-          title: t(language, "perspectives"),
-          content: getContent(
-            language === "FR" ? article.perspectives_fr : article.perspectives_en,
-          ),
-        },
-      ];
+    : [];
 
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
@@ -383,17 +347,6 @@ export default function ArticlePage() {
                 {formatDate(article.created_at, language)}
               </p>
             </div>
-            <div
-              className={`content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm ${
-                article.status === t(language, "complet")
-                  ? "bg-success"
-                  : "bg-warning"
-              }`}
-            >
-              <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
-                {article.status}
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -405,25 +358,26 @@ export default function ArticlePage() {
           className="absolute border-gray-50 border-b inset-0 pointer-events-none"
         />
         <div className="flex flex-col items-center size-full">
-          <div className="content-stretch flex flex-col lg:flex-row gap-8 sm:gap-10 md:gap-12 lg:gap-16 items-start p-4 sm:p-6 md:p-8 lg:p-12 relative w-full">
-            {/* Contenu principal */}
-            <div className="flex-1 content-stretch flex flex-col gap-6 sm:gap-8 md:gap-10 items-start relative">
-              {sections.map((section) => (
-                <div
-                  key={section.id}
-                  id={section.id}
-                  className={`content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full scroll-mt-[100px] sm:scroll-mt-[120px] md:scroll-mt-[140px]`}
-                >
-                  <p className="font-['Inter:Bold',sans-serif] font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
-                    {section.title}
-                  </p>
-                  <HtmlContent html={section.content} />
-                </div>
-              ))}
-            </div>
+          {(sections.length > 0 || isAuthenticated) && (
+            <div className="content-stretch flex flex-col lg:flex-row gap-8 sm:gap-10 md:gap-12 lg:gap-16 items-start p-4 sm:p-6 md:p-8 lg:p-12 relative w-full">
+              {/* Contenu principal */}
+              <div className="flex-1 content-stretch flex flex-col gap-6 sm:gap-8 md:gap-10 items-start relative">
+                {sections.map((section) => (
+                  <div
+                    key={section.id}
+                    id={section.id}
+                    className={`content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full scroll-mt-[100px] sm:scroll-mt-[120px] md:scroll-mt-[140px]`}
+                  >
+                    <p className="font-['Inter:Bold',sans-serif] font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl text-black w-full">
+                      {section.title}
+                    </p>
+                    <HtmlContent html={section.content} />
+                  </div>
+                ))}
+              </div>
 
-            {/* Sidebar */}
-            <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full lg:w-80 lg:sticky lg:top-20">
+              {/* Sidebar */}
+              <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full lg:w-80 lg:sticky lg:top-20">
               {/* Action Buttons for Authenticated Users */}
               {isAuthenticated && (
                 <div className="flex gap-[8px] w-full">
@@ -471,34 +425,37 @@ export default function ArticlePage() {
                   </button>
                 </div>
               )}
-              {/* Sommaire */}
-              <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
-                <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
-                  {t(language, "sommaire")}
-                </p>
-                <div className="content-stretch flex flex-col gap-1 sm:gap-1.5 items-start w-full">
-                  {sections.map((section) => (
-                    <button
-                      key={section.id}
-                      onClick={() => {
-                        setActiveSection(section.id);
-                        const element = document.getElementById(section.id);
-                        element?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      className={`font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base w-full text-left p-2 sm:p-2.5 md:p-3 rounded-sm transition-colors ${
-                        activeSection === section.id
-                          ? "bg-error-accent text-white"
-                          : "text-black hover:bg-gray-200"
-                      }`}
-                    >
-                      {section.title}
-                    </button>
-                  ))}
+              {/* Sommaire - Afficher seulement si sections ne sont pas vides */}
+              {sections.length > 0 && (
+                <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
+                  <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
+                    {t(language, "sommaire")}
+                  </p>
+                  <div className="content-stretch flex flex-col gap-1 sm:gap-1.5 items-start w-full">
+                    {sections.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => {
+                          setActiveSection(section.id);
+                          const element = document.getElementById(section.id);
+                          element?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className={`font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base w-full text-left p-2 sm:p-2.5 md:p-3 rounded-sm transition-colors ${
+                          activeSection === section.id
+                            ? "bg-error-accent text-white"
+                            : "text-black hover:bg-gray-200"
+                        }`}
+                      >
+                        {section.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Galerie d'images */}
-              <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
+              {/* Galerie d'images - Afficher seulement si sections ne sont pas vides */}
+              {sections.length > 0 && (
+                <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
                 <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                   {t(language, "galerie")}
                 </p>
@@ -564,8 +521,10 @@ export default function ArticlePage() {
                     </div>
                   )}
               </div>
+              )}
             </div>
           </div>
+          )}
         </div>
       </div>
 
