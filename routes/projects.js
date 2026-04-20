@@ -302,9 +302,34 @@ router.get("/files/all", requireDB, async (req, res) => {
 // GET ALL - GET /api/projects
 router.get("/", requireDB, async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT * FROM projects ORDER BY created_at DESC");
-    const rows = await stmt.all();
-    res.json(rows);
+    const stmt = db.prepare(`
+      SELECT 
+        p.*,
+        pc.id as first_content_id,
+        pc.content_fr as first_content_fr,
+        pc.content_en as first_content_en
+      FROM projects p
+      LEFT JOIN project_contents pc ON p.id = pc.project_id AND pc.position = 1
+      ORDER BY p.created_at DESC
+    `);
+    const projects = await stmt.all();
+    
+    // Enrichir chaque projet avec tous ses contenus
+    const enrichedProjects = await Promise.all(
+      projects.map(async (project) => {
+        const contentsStmt = db.prepare(
+          "SELECT id, project_id, title_fr, title_en, content_fr, content_en, position FROM project_contents WHERE project_id = ? ORDER BY position ASC"
+        );
+        const contents = await contentsStmt.all(project.id);
+        
+        return {
+          ...project,
+          contents: contents || []
+        };
+      })
+    );
+    
+    res.json(enrichedProjects);
   } catch (err) {
     console.error("Get projects error:", err);
     return res.status(500).json({ error: err.message });
@@ -315,11 +340,21 @@ router.get("/", requireDB, async (req, res) => {
 router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
     const stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
-    const row = await stmt.get(req.params.projectId);
-    if (!row) {
+    const project = await stmt.get(req.params.projectId);
+    if (!project) {
       return res.status(404).json({ error: "Projet non trouvé" });
     }
-    res.json(row);
+
+    // Récupérer les contenus associés, triés par position
+    const contentsStmt = db.prepare(
+      "SELECT id, project_id, title_fr, title_en, content_fr, content_en, position FROM project_contents WHERE project_id = ? ORDER BY position ASC"
+    );
+    const contents = await contentsStmt.all(req.params.projectId);
+
+    res.json({
+      ...project,
+      contents: contents || []
+    });
   } catch (err) {
     console.error("Get project error:", err);
     return res.status(500).json({ error: "Erreur lors de la récupération du projet" });

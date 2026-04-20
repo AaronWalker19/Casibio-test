@@ -7,7 +7,6 @@ interface ArticleCardProps {
   id: number;
   title: string;
   date: string;
-  status: string;
   description: string;
   image?: string;
   onEdit?: () => void;
@@ -16,8 +15,7 @@ interface ArticleCardProps {
   isEditable?: boolean;
 }
 
-export function ArticleCard({ id, title, date, status, description, image, onEdit, onDelete, onView, isEditable = false }: ArticleCardProps) {
-  const isComplete = status === "Complet" || status === "Complété";
+export function ArticleCard({ id, title, date, description, image, onEdit, onDelete, onView, isEditable = false }: ArticleCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const handleViewClick = (e: React.MouseEvent) => {
@@ -90,13 +88,6 @@ export function ArticleCard({ id, title, date, status, description, image, onEdi
             <div className="bg-error flex items-center justify-center px-2 sm:px-3 py-0.5 sm:py-1 relative rounded-sm ">
               <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative  text-xs sm:text-sm text-white whitespace-nowrap">
                 date: {date}
-              </p>
-            </div>
-            <div className={`flex items-center justify-center px-2 sm:px-3 py-0.5 sm:py-1 relative rounded-sm  ${
-              isComplete ? "bg-success" : "bg-warning"
-            }`}>
-              <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative  text-xs sm:text-sm text-white whitespace-nowrap">
-                {status}
               </p>
             </div>
           </div>

@@ -19,25 +19,20 @@ interface Article {
   perspectives_fr: string | null;
   perspectives_en: string | null;
   code_anr?: string;
+  first_content_fr?: string | null;
+  first_content_en?: string | null;
+  contents?: Array<{
+    id: number;
+    project_id: number;
+    title_fr: string;
+    title_en: string;
+    content_fr: string;
+    content_en: string;
+    position: number;
+  }>;
 }
 
-// Fonction pour calculer le statut basé sur la complétude des champs
-const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
-  const importantFields = language === 'FR' ? [
-    article.summary_fr,
-    article.methods_fr,
-    article.results_fr,
-    article.perspectives_fr,
-  ] : [
-    article.summary_en,
-    article.methods_en,
-    article.results_en,
-    article.perspectives_en,
-  ];
-  
-  const hasEmptyField = importantFields.some(field => !field || field.trim() === "");
-  return hasEmptyField ? (language === 'FR' ? "En cours" : "In progress") : (language === 'FR' ? "Complet" : "Complete");
-};
+
 
 export default function ArticlesPage() {
   const { language } = useLanguage();
@@ -47,8 +42,6 @@ export default function ArticlesPage() {
   const [sortBy, setSortBy] = useState<"date-asc" | "date-desc">("date-desc");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "complete" | "in-progress">("all");
-  const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [articleImages, setArticleImages] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
@@ -60,17 +53,21 @@ export default function ArticlesPage() {
         }
         const data = await response.json();
         
-        // Enrichir les articles avec le statut calculé
-        const enrichedArticles = data.map((article: Article) => ({
-          ...article,
-          status: calculateStatus(article, language),
-        }));
+        console.log("=== ARTICLES RÉCUPÉRÉS ===");
+        console.log("Nombre d'articles:", data.length);
+        if (data.length > 0) {
+          console.log("Premier article:", data[0]);
+          console.log("- Contenu FR:", data[0].first_content_fr);
+          console.log("- Contenu EN:", data[0].first_content_en);
+          console.log("- Contenus array:", data[0].contents);
+        }
         
-        setArticles(enrichedArticles);
+        // Sauvegarder uniquement les articles, pas enrichis
+        setArticles(data);
         
         // Récupérer les images liées à chaque article
         const imagesMap: { [key: number]: string } = {};
-        for (const article of enrichedArticles) {
+        for (const article of data) {
           try {
             const filesResponse = await fetch(`/api/projects/${article.id}/files`);
             if (filesResponse.ok) {
@@ -107,7 +104,7 @@ export default function ArticlesPage() {
     fetchArticles();
   }, [language]);
 
-  // Filtrer les articles par terme de recherche et statut
+  // Filtrer les articles par terme de recherche
   const filteredArticles = articles.filter((article) => {
     const matchesSearch = 
       (language === 'FR' ? article.title_fr : article.title_en)
@@ -115,12 +112,7 @@ export default function ArticlesPage() {
         .includes(searchTerm.toLowerCase()) ||
       article.created_at.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = 
-      statusFilter === "all" ||
-      (statusFilter === "complete" && article.status === (language === 'FR' ? "Complet" : "Complete")) ||
-      (statusFilter === "in-progress" && article.status === (language === 'FR' ? "En cours" : "In progress"));
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   // Trier les articles
@@ -163,66 +155,6 @@ export default function ArticlesPage() {
                     <path d="M19.6914 20.9531L13.168 14.4297C12.6758 14.8438 12.1152 15.168 11.4863 15.4023C10.8574 15.6367 10.1895 15.7539 9.48242 15.7539C7.72852 15.7539 6.22852 15.1582 5.04102 13.9668C3.84375 12.7852 3.24023 11.2852 3.24023 9.53125C3.24023 7.77734 3.8418 6.27734 5.04102 5.08594C6.23047 3.88477 7.73047 3.28516 9.48242 3.28516C11.2441 3.28516 12.7441 3.88477 13.9355 5.08594C15.1367 6.27734 15.7363 7.77734 15.7363 9.53125C15.7363 10.2383 15.6191 10.9062 15.3848 11.5352C15.1504 12.1641 14.8262 12.7305 14.4121 13.2227L20.9551 19.7656L19.6914 20.9531ZM9.48242 14.0039C10.7461 14.0039 11.8184 13.5527 12.6895 12.6621C13.5703 11.7617 14.0156 10.6895 14.0156 9.42578C14.0156 8.16211 13.5703 7.08984 12.6895 6.19922C11.8184 5.29883 10.7461 4.84766 9.48242 4.84766C8.20898 4.84766 7.13086 5.29883 6.25977 6.19922C5.37891 7.08984 4.93359 8.16211 4.93359 9.42578C4.93359 10.6895 5.37891 11.7617 6.25977 12.6621C7.13086 13.5527 8.20898 14.0039 9.48242 14.0039Z" fill="black" />
                   </svg>
                 </div>
-              </div>
-
-              {/* Bouton Filtre État */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className="flex gap-2 sm:gap-3 items-center px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 relative rounded-sm shrink-0 h-9 sm:h-10 md:h-11 border border-black hover:bg-gray-50 transition w-full sm:w-auto"
-                >
-                  <div className="relative shrink-0 size-4 sm:size-5 md:size-5 flex-shrink-0" data-name="mi:filter">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
-                      <path d="M4 8H28V10.6667H4V8ZM8 14.6667H24V17.3333H8V14.6667ZM12 21.3333H20V24H12V21.3333Z" fill="black" />
-                    </svg>
-                  </div>
-                  <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-black whitespace-nowrap">
-                    {statusFilter === "all" 
-                      ? (language === 'FR' ? "État" : "Status")
-                      : statusFilter === "complete"
-                      ? (language === 'FR' ? "Complet" : "Complete")
-                      : (language === 'FR' ? "En cours" : "In progress")}
-                  </p>
-                </button>
-
-                {/* Menu déroulant État */}
-                {showStatusMenu && (
-                  <div className="absolute right-0 mt-1 sm:mt-2 bg-white border border-black rounded-sm z-10 shadow-lg">
-                    <button
-                      onClick={() => {
-                        setStatusFilter("all");
-                        setShowStatusMenu(false);
-                      }}
-                      className={`block w-full text-left px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base ${
-                        statusFilter === "all" ? "bg-error-accent text-white" : "hover:bg-gray-100"
-                      }`}
-                    >
-                      {language === 'FR' ? "Tous" : "All"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setStatusFilter("complete");
-                        setShowStatusMenu(false);
-                      }}
-                      className={`block w-full text-left px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base ${
-                        statusFilter === "complete" ? "bg-error-accent text-white" : "hover:bg-gray-100"
-                      }`}
-                    >
-                      {language === 'FR' ? "Complet" : "Complete"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setStatusFilter("in-progress");
-                        setShowStatusMenu(false);
-                      }}
-                      className={`block w-full text-left px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base ${
-                        statusFilter === "in-progress" ? "bg-error-accent text-white" : "hover:bg-gray-100"
-                      }`}
-                    >
-                      {language === 'FR' ? "En cours" : "In progress"}
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Bouton Filtre Date */}
@@ -304,8 +236,7 @@ export default function ArticlesPage() {
                       month: 'long',
                       day: 'numeric'
                     })}
-                    status={calculateStatus(article, language)}
-                    description={language === 'FR' ? article.title_fr : article.title_en}
+                    description={language === 'FR' ? (article.first_content_fr || '') : (article.first_content_en || '')}
                     image={articleImages[article.id]}
                   />
                 ))}

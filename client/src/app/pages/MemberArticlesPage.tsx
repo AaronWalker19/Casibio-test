@@ -22,6 +22,17 @@ interface Article {
   results_en?: string;
   perspectives_fr?: string;
   perspectives_en?: string;
+  first_content_fr?: string | null;
+  first_content_en?: string | null;
+  contents?: Array<{
+    id: number;
+    project_id: number;
+    title_fr: string;
+    title_en: string;
+    content_fr: string;
+    content_en: string;
+    position: number;
+  }>;
 }
 
 export default function MemberArticlesPage() {
@@ -35,7 +46,6 @@ export default function MemberArticlesPage() {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [filterStatus, setFilterStatus] = useState("tous");
   const [articleImages, setArticleImages] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
@@ -64,6 +74,16 @@ export default function MemberArticlesPage() {
       }
 
       const data = await response.json();
+      
+      console.log("=== MEMBER ARTICLES PAGE ===");
+      console.log("Nombre d'articles:", data.length);
+      if (data.length > 0) {
+        console.log("Premier article:", data[0]);
+        console.log("- first_content_fr:", data[0].first_content_fr);
+        console.log("- first_content_en:", data[0].first_content_en);
+        console.log("- contents:", data[0].contents);
+      }
+      
       setArticles(data);
       setError("");
       
@@ -166,7 +186,14 @@ export default function MemberArticlesPage() {
 
   // Fonction pour vérifier si un article est complet
   const isArticleComplete = (article: Article): boolean => {
-    // Un article est complet si tous les champs (obligatoires et optionnels) sont remplis
+    // Si l'article a des contenus, il est complet s'il n'a pas de contenus vides
+    if (article.contents && article.contents.length > 0) {
+      return !article.contents.some(content => 
+        !content.content_fr?.trim() || !content.content_en?.trim()
+      );
+    }
+    
+    // Fallback pour les anciens articles : vérifier les champs statiques
     return !!(
       article.title_fr?.trim() &&
       article.title_en?.trim() &&
@@ -282,46 +309,6 @@ export default function MemberArticlesPage() {
 
                         {/* Séparateur */}
                         <div className="h-[1px] bg-gray-300" />
-
-                        {/* Filtre par statut */}
-                        <div className="flex flex-col gap-[8px]">
-                          <p className="font-['Inter:Bold',sans-serif] font-bold text-[14px] text-black">
-                            Statut
-                          </p>
-                          <button
-                            onClick={() => {
-                              setFilterStatus("tous");
-                              setShowFilterMenu(false);
-                            }}
-                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
-                              filterStatus === "tous" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
-                            }`}
-                          >
-                            Tous
-                          </button>
-                          <button
-                            onClick={() => {
-                              setFilterStatus("completed");
-                              setShowFilterMenu(false);
-                            }}
-                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
-                              filterStatus === "completed" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
-                            }`}
-                          >
-                            Terminé
-                          </button>
-                          <button
-                            onClick={() => {
-                              setFilterStatus("in_progress");
-                              setShowFilterMenu(false);
-                            }}
-                            className={`p-[8px] rounded-[4px] text-left text-[14px] ${
-                              filterStatus === "in_progress" ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200"
-                            }`}
-                          >
-                            En cours
-                          </button>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -377,8 +364,7 @@ export default function MemberArticlesPage() {
                     id={article.id}
                     title={language === 'FR' ? article.title_fr : article.title_en}
                     date={formatDate(article.created_at)}
-                    status={isArticleComplete(article) ? "Complété" : "En cours"}
-                    description={language === 'FR' ? (article.summary_fr ?? "") : (article.summary_en ?? "")}
+                    description={language === 'FR' ? (article.first_content_fr ?? "") : (article.first_content_en ?? "")}
                     image={articleImages[article.id]}
                     isEditable={true}
                     onEdit={() => handleEditArticle(article)}

@@ -26,6 +26,17 @@ interface Article {
   perspectives_fr: string | null;
   perspectives_en: string | null;
   code_anr?: string;
+  first_content_fr?: string | null;
+  first_content_en?: string | null;
+  contents?: Array<{
+    id: number;
+    project_id: number;
+    title_fr: string;
+    title_en: string;
+    content_fr: string;
+    content_en: string;
+    position: number;
+  }>;
 }
 
 interface GalleryImage {
@@ -37,23 +48,7 @@ interface GalleryImage {
   created_at: string;
 }
 
-// Fonction pour calculer le statut basé sur la complétude des champs
-const calculateStatus = (article: Article, language: 'FR' | 'EN'): string => {
-  const importantFields = language === 'FR' ? [
-    article.summary_fr,
-    article.methods_fr,
-    article.results_fr,
-    article.perspectives_fr,
-  ] : [
-    article.summary_en,
-    article.methods_en,
-    article.results_en,
-    article.perspectives_en,
-  ];
-  
-  const hasEmptyField = importantFields.some(field => !field || field.trim() === "");
-  return hasEmptyField ? t(language, "inCours") : t(language, "complet");
-};
+
 
 function Frame4() {
   return (
@@ -106,22 +101,24 @@ export default function HomePage() {
         }
         const data = await response.json();
         
+        console.log("=== HOMEPAGE ARTICLES ===");
+        console.log("Nombre d'articles:", data.length);
+        if (data.length > 0) {
+          console.log("Premier article:", data[0]);
+          console.log("- first_content_fr:", data[0].first_content_fr);
+          console.log("- first_content_en:", data[0].first_content_en);
+          console.log("- contents:", data[0].contents);
+        }
+        
         // Sauvegarder le nombre total d'articles
         setTotalArticlesCount(data.length);
         
-        // Enrichir les articles avec le statut calculé et prendre les 3 premiers
-        const enrichedArticles = data
-          .slice(0, 3)
-          .map((article: Article) => ({
-            ...article,
-            status: calculateStatus(article, language),
-          }));
-        
-        setArticles(enrichedArticles);
+        // Prendre les 3 premiers articles
+        setArticles(data.slice(0, 3));
         
         // Récupérer les images liées à chaque article
         const imagesMap: { [key: number]: string } = {};
-        for (const article of enrichedArticles) {
+        for (const article of data.slice(0, 3)) {
           try {
             const filesResponse = await fetch(`/api/projects/${article.id}/files`);
             if (filesResponse.ok) {
@@ -285,8 +282,7 @@ export default function HomePage() {
                       month: 'long',
                       day: 'numeric'
                     })}
-                    status={calculateStatus(article, language)}
-                    description={language === 'FR' ? article.title_fr : article.title_en}
+                    description={language === 'FR' ? (article.first_content_fr || '') : (article.first_content_en || '')}
                     image={articleImages[article.id]}
                   />
                 ))

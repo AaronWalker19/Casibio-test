@@ -34,6 +34,17 @@ interface Article {
   results_en: string | null;
   perspectives_fr: string | null;
   perspectives_en: string | null;
+  contents?: ProjectContent[];
+}
+
+interface ProjectContent {
+  id: number;
+  project_id: number;
+  title_fr: string;
+  title_en: string;
+  content_fr: string;
+  content_en: string;
+  position: number;
 }
 
 interface GalleryImage {
@@ -89,29 +100,6 @@ const parseDate = (dateString: string): Date => {
   }
 };
 
-// Fonction pour calculer le statut basé sur la complétude des champs
-const calculateStatus = (article: Article, language: "FR" | "EN"): string => {
-  const importantFields =
-    language === "FR"
-      ? [
-          article.summary_fr,
-          article.methods_fr,
-          article.results_fr,
-          article.perspectives_fr,
-        ]
-      : [
-          article.summary_en,
-          article.methods_en,
-          article.results_en,
-          article.perspectives_en,
-        ];
-
-  const hasEmptyField = importantFields.some(
-    (field) => !field || field.trim() === "",
-  );
-  return hasEmptyField ? t(language, "inCours") : t(language, "complet");
-};
-
 // Fonction pour obtenir le contenu avec fallback
 const getContent = (content: string | null): string => {
   return content && content.trim() ? content : "";
@@ -145,14 +133,13 @@ export default function ArticlePage() {
         }
         const data = await response.json();
 
-        // Ajouter le statut calculé
-        const calculatedStatus = calculateStatus(data, language);
-        const enrichedArticle = {
-          ...data,
-          status: calculatedStatus,
-        };
+        console.log("=== ARTICLE INDIVIDUEL ===");
+        console.log("Article ID:", id);
+        console.log("Article data:", data);
+        console.log("- Contenus array:", data.contents);
+        console.log("- Nombre de contenus:", data.contents?.length);
 
-        setArticle(enrichedArticle);
+        setArticle(data);
       } catch (err) {
         console.error(err);
         setError(
@@ -266,36 +253,47 @@ export default function ArticlePage() {
     );
   }
 
-  const sections = [
-    {
-      id: "resume",
-      title: t(language, "resume"),
-      content: getContent(
-        language === "FR" ? article.summary_fr : article.summary_en,
-      ),
-    },
-    {
-      id: "methodes",
-      title: t(language, "methodes"),
-      content: getContent(
-        language === "FR" ? article.methods_fr : article.methods_en,
-      ),
-    },
-    {
-      id: "resultats",
-      title: t(language, "resultats"),
-      content: getContent(
-        language === "FR" ? article.results_fr : article.results_en,
-      ),
-    },
-    {
-      id: "perspectives",
-      title: t(language, "perspectives"),
-      content: getContent(
-        language === "FR" ? article.perspectives_fr : article.perspectives_en,
-      ),
-    },
-  ];
+  // Construire les sections dynamiquement à partir des contenus ou des données statiques
+  const sections = (article.contents && article.contents.length > 0)
+    ? article.contents
+        .map(content => ({
+          id: `section-${content.id}`,
+          title: language === "FR" ? content.title_fr : content.title_en,
+          content: getContent(
+            language === "FR" ? content.content_fr : content.content_en,
+          ),
+        }))
+        .filter(section => section.content) // Filtrer les sections vides
+    : [
+        {
+          id: "resume",
+          title: t(language, "resume"),
+          content: getContent(
+            language === "FR" ? article.summary_fr : article.summary_en,
+          ),
+        },
+        {
+          id: "methodes",
+          title: t(language, "methodes"),
+          content: getContent(
+            language === "FR" ? article.methods_fr : article.methods_en,
+          ),
+        },
+        {
+          id: "resultats",
+          title: t(language, "resultats"),
+          content: getContent(
+            language === "FR" ? article.results_fr : article.results_en,
+          ),
+        },
+        {
+          id: "perspectives",
+          title: t(language, "perspectives"),
+          content: getContent(
+            language === "FR" ? article.perspectives_fr : article.perspectives_en,
+          ),
+        },
+      ];
 
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
