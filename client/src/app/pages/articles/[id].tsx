@@ -58,8 +58,87 @@ interface GalleryImage {
   is_present_image?: boolean;
 }
 
+interface Participant {
+  user_id: number;
+  username: string;
+  email: string;
+  role: string;
+  first_participation?: string;
+  last_participation?: string;
+  modification_count?: number;
+}
+
+interface ParticipantsData {
+  creator: {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+  } | null;
+  participants: Participant[];
+  total_participants: number;
+  total_modifications: number;
+  history?: HistoryEntry[];
+}
+
+interface HistoryEntry {
+  id: number;
+  user_id: number;
+  project_id: number;
+  added_at: string;
+  username: string;
+  email: string;
+  role: string;
+}
+
+// Fonction pour formater date et heure ensemble
+const formatDateTime = (
+  dateString: string | null | undefined,
+  language: "FR" | "EN" | "fr" | "en",
+): string => {
+  if (!dateString) {
+    return "";
+  }
+  try {
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
+    const lang = language.toUpperCase() as "FR" | "EN";
+    const date = new Date(normalizedDate);
+
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+
+    const dateStr = date.toLocaleDateString(
+      lang === "FR" ? "fr-FR" : "en-US",
+      {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      },
+    );
+
+    const timeStr = date.toLocaleTimeString(
+      lang === "FR" ? "fr-FR" : "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      },
+    );
+
+    return `${dateStr} ${timeStr}`;
+  } catch {
+    return dateString || "";
+  }
+};
+
 // Fonction pour formater les dates correctement
-const formatDate = (dateString: string | null | undefined, language: "FR" | "EN" | "fr" | "en"): string => {
+const formatDate = (
+  dateString: string | null | undefined,
+  language: "FR" | "EN" | "fr" | "en",
+): string => {
   if (!dateString) {
     return "";
   }
@@ -70,20 +149,17 @@ const formatDate = (dateString: string | null | undefined, language: "FR" | "EN"
       : dateString.replace(" ", "T");
     const lang = language.toUpperCase() as "FR" | "EN";
     const date = new Date(normalizedDate);
-    
+
     // Vérifier si la date est valide
     if (isNaN(date.getTime())) {
       return dateString;
     }
-    
-    return date.toLocaleDateString(
-      lang === "FR" ? "fr-FR" : "en-US",
-      {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      },
-    );
+
+    return date.toLocaleDateString(lang === "FR" ? "fr-FR" : "en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   } catch {
     return dateString || "";
   }
@@ -123,6 +199,9 @@ export default function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [participantsData, setParticipantsData] =
+    useState<ParticipantsData | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Récupérer les données du projet
   useEffect(() => {
@@ -169,6 +248,32 @@ export default function ArticlePage() {
 
     if (id) {
       fetchProjectFiles();
+    }
+  }, [id]);
+
+  // Récupérer les participants du projet
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      try {
+        const response = await fetch(`/api/projects/${id}/participants`);
+        if (!response.ok) {
+          console.warn(
+            `Impossible de charger les participants (${response.status})`,
+          );
+          setParticipantsData(null);
+          return;
+        }
+        const data = await response.json();
+        setParticipantsData(data);
+      } catch (err) {
+        console.warn("Erreur lors du chargement des participants:", err);
+        // Ne pas afficher l'erreur, juste ignorer
+        setParticipantsData(null);
+      }
+    };
+
+    if (id) {
+      fetchParticipants();
     }
   }, [id]);
 
@@ -250,17 +355,18 @@ export default function ArticlePage() {
   }
 
   // Construire les sections dynamiquement à partir des contenus ou des données statiques
-  const sections = (article.contents && article.contents.length > 0)
-    ? article.contents
-        .map(content => ({
-          id: `section-${content.id}`,
-          title: language === "FR" ? content.title_fr : content.title_en,
-          content: getContent(
-            language === "FR" ? content.content_fr : content.content_en,
-          ),
-        }))
-        .filter(section => section.content) // Filtrer les sections vides
-    : [];
+  const sections =
+    article.contents && article.contents.length > 0
+      ? article.contents
+          .map((content) => ({
+            id: `section-${content.id}`,
+            title: language === "FR" ? content.title_fr : content.title_en,
+            content: getContent(
+              language === "FR" ? content.content_fr : content.content_en,
+            ),
+          }))
+          .filter((section) => section.content) // Filtrer les sections vides
+      : [];
 
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
@@ -320,32 +426,30 @@ export default function ArticlePage() {
       <div className="bg-white content-stretch flex flex-col items-center gap-4 sm:gap-5 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 w-full border-b border-gray-50">
         <div className="h-40 sm:h-56 md:h-64 lg:h-80 w-full rounded-sm overflow-hidden">
           <ImageWithFallback
-            src={
-              (() => {
-                // Filtrer les images
-                const images = projectFiles.filter((f) =>
-                  f.file_type?.toLowerCase().startsWith("image/"),
-                );
-                
-                if (images.length === 0) {
-                  return "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop";
-                }
-                
-                // D'abord chercher l'image avec is_present_image = true
-                const presentImage = images.find((img) => img.is_present_image);
-                if (presentImage) {
-                  return presentImage.file_path;
-                }
-                
-                // Sinon, trier par date décroissante et prendre la plus récente
-                const sortedImages = images.sort(
-                  (a, b) =>
-                    parseDate(b.created_at).getTime() -
-                    parseDate(a.created_at).getTime(),
-                );
-                return sortedImages[0].file_path;
-              })()
-            }
+            src={(() => {
+              // Filtrer les images
+              const images = projectFiles.filter((f) =>
+                f.file_type?.toLowerCase().startsWith("image/"),
+              );
+
+              if (images.length === 0) {
+                return "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop";
+              }
+
+              // D'abord chercher l'image avec is_present_image = true
+              const presentImage = images.find((img) => img.is_present_image);
+              if (presentImage) {
+                return presentImage.file_path;
+              }
+
+              // Sinon, trier par date décroissante et prendre la plus récente
+              const sortedImages = images.sort(
+                (a, b) =>
+                  parseDate(b.created_at).getTime() -
+                  parseDate(a.created_at).getTime(),
+              );
+              return sortedImages[0].file_path;
+            })()}
             alt={article.title_fr}
             className="w-full h-full object-cover"
           />
@@ -388,135 +492,100 @@ export default function ArticlePage() {
 
               {/* Sidebar */}
               <div className="content-stretch flex flex-col gap-4 sm:gap-5 md:gap-6 items-start w-full lg:w-80 lg:sticky lg:top-20">
-              {/* Action Buttons for Authenticated Users */}
-              {isAuthenticated && (
-                <div className="flex gap-[8px] w-full">
-                  <button
-                    onClick={handleEditArticle}
-                    className="bg-blue-500 p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-blue-600 transition-colors flex justify-between items-center flex-1"
-                    title="Modifier l'article"
-                  >
-                    <svg
-                      className="size-[24px]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z"
-                        fill="white"
-                      />
-                      <path
-                        d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"
-                        fill="white"
-                      />
-                    </svg>
-                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
-                      {t(language, "modifier")}
-                    </p>
-                  </button>
-                  <button
-                    onClick={handleDeleteArticle}
-                    className="bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-[#a01f26] transition-colors flex justify-between items-center flex-1"
-                    title="Supprimer l'article"
-                  >
-                    <svg
-                      className="size-[24px]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z"
-                        fill="white"
-                      />
-                    </svg>
-                    <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
-                      {t(language, "supprimer")}
-                    </p>
-                  </button>
-                </div>
-              )}
-              {/* Sommaire - Afficher seulement si sections ne sont pas vides */}
-              {sections.length > 0 && (
-                <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
-                  <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
-                    {t(language, "sommaire")}
-                  </p>
-                  <div className="content-stretch flex flex-col gap-1 sm:gap-1.5 items-start w-full">
-                    {sections.map((section) => (
+                {/* Action Buttons for Authenticated Users */}
+                {isAuthenticated && (
+                  <>
+                    <div className="flex gap-[8px] w-full">
                       <button
-                        key={section.id}
-                        onClick={() => {
-                          setActiveSection(section.id);
-                          const element = document.getElementById(section.id);
-                          element?.scrollIntoView({ behavior: "smooth" });
-                        }}
-                        className={`font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base w-full text-left p-2 sm:p-2.5 md:p-3 rounded-sm transition-colors ${
-                          activeSection === section.id
-                            ? "bg-error-accent text-white"
-                            : "text-black hover:bg-gray-200"
-                        }`}
+                        onClick={handleEditArticle}
+                        className="bg-blue-500 p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-blue-600 transition-colors flex justify-between items-center flex-1"
+                        title="Modifier l'article"
                       >
-                        {section.title}
+                        <svg
+                          className="size-[24px]"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z"
+                            fill="white"
+                          />
+                          <path
+                            d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"
+                            fill="white"
+                          />
+                        </svg>
+                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
+                          {t(language, "modifier")}
+                        </p>
                       </button>
-                    ))}
+                      <button
+                        onClick={handleDeleteArticle}
+                        className="bg-[#c9232c] p-[8px] rounded-[4px] cursor-pointer h-fit hover:bg-[#a01f26] transition-colors flex justify-between items-center flex-1"
+                        title="Supprimer l'article"
+                      >
+                        <svg
+                          className="size-[24px]"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z"
+                            fill="white"
+                          />
+                        </svg>
+                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[18px] h-full text-white whitespace-nowrap flex items-center">
+                          {t(language, "supprimer")}
+                        </p>
+                      </button>
+                    </div>
+                  </>
+                )}
+                {/* Sommaire - Afficher seulement si sections ne sont pas vides */}
+                {sections.length > 0 && (
+                  <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
+                    <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
+                      {t(language, "sommaire")}
+                    </p>
+                    <div className="content-stretch flex flex-col gap-1 sm:gap-1.5 items-start w-full">
+                      {sections.map((section) => (
+                        <button
+                          key={section.id}
+                          onClick={() => {
+                            setActiveSection(section.id);
+                            const element = document.getElementById(section.id);
+                            element?.scrollIntoView({ behavior: "smooth" });
+                          }}
+                          className={`font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm md:text-base w-full text-left p-2 sm:p-2.5 md:p-3 rounded-sm transition-colors ${
+                            activeSection === section.id
+                              ? "bg-error-accent text-white"
+                              : "text-black hover:bg-gray-200"
+                          }`}
+                        >
+                          {section.title}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Galerie d'images - Afficher seulement si sections ne sont pas vides */}
-              {sections.length > 0 && (
-                <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
-                <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
-                  {t(language, "galerie")}
-                </p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full">
-                  {projectFiles
-                    .filter((f) => f.file_type?.toLowerCase().startsWith("image/"))
-                    .slice(0, 8)
-                    .map((image, index) => (
-                      <button
-                        key={image.id}
-                        onClick={() => {
-                          setSelectedImageIndex(index);
-                          setLightboxOpen(true);
-                        }}
-                        className="aspect-square rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <ImageWithFallback
-                          src={image.file_path}
-                          alt={image.file_display_name}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  {projectFiles.filter((f) =>
-                    f.file_type?.toLowerCase().startsWith("image/"),
-                  ).length > 8 && !showFullGallery && (
-                    <button
-                      onClick={() => setShowFullGallery(true)}
-                      className="aspect-square rounded-sm bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
-                    >
-                      <span className="text-white text-lg sm:text-2xl md:text-3xl font-bold">
-                        +
-                      </span>
-                    </button>
-                  )}
-                </div>
-                {showFullGallery &&
-                  projectFiles.filter((f) =>
-                    f.file_type?.toLowerCase().startsWith("image/"),
-                  ).length > 8 && (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full mt-2 sm:mt-3 md:mt-4">
+                {/* Galerie d'images - Afficher seulement si sections ne sont pas vides */}
+                {sections.length > 0 && (
+                  <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
+                    <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
+                      {t(language, "galerie")}
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full">
                       {projectFiles
                         .filter((f) =>
                           f.file_type?.toLowerCase().startsWith("image/"),
                         )
-                        .slice(8)
+                        .slice(0, 8)
                         .map((image, index) => (
                           <button
                             key={image.id}
                             onClick={() => {
-                              setSelectedImageIndex(index + 8);
+                              setSelectedImageIndex(index);
                               setLightboxOpen(true);
                             }}
                             className="aspect-square rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
@@ -528,12 +597,105 @@ export default function ArticlePage() {
                             />
                           </button>
                         ))}
+                      {projectFiles.filter((f) =>
+                        f.file_type?.toLowerCase().startsWith("image/"),
+                      ).length > 8 &&
+                        !showFullGallery && (
+                          <button
+                            onClick={() => setShowFullGallery(true)}
+                            className="aspect-square rounded-sm bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
+                          >
+                            <span className="text-white text-lg sm:text-2xl md:text-3xl font-bold">
+                              +
+                            </span>
+                          </button>
+                        )}
                     </div>
-                  )}
+                    {showFullGallery &&
+                      projectFiles.filter((f) =>
+                        f.file_type?.toLowerCase().startsWith("image/"),
+                      ).length > 8 && (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 w-full mt-2 sm:mt-3 md:mt-4">
+                          {projectFiles
+                            .filter((f) =>
+                              f.file_type?.toLowerCase().startsWith("image/"),
+                            )
+                            .slice(8)
+                            .map((image, index) => (
+                              <button
+                                key={image.id}
+                                onClick={() => {
+                                  setSelectedImageIndex(index + 8);
+                                  setLightboxOpen(true);
+                                }}
+                                className="aspect-square rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <ImageWithFallback
+                                  src={image.file_path}
+                                  alt={image.file_display_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {/* Participants - Bloc compact dans le sidebar */}
+                {participantsData && (
+                  <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
+                    <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
+                      {t(language, "participants")}
+                    </p>
+
+                    {/* Créé par */}
+                    {participantsData.creator && (
+                      <div className="flex gap-2 items-start w-full text-sm">
+                        <p className="font-['Inter:Bold',sans-serif] font-bold text-gray-700 flex-shrink-0">
+                          {t(language, "creePar")}:
+                        </p>
+                        <p className="font-['Inter:Regular',sans-serif] font-normal text-black">
+                          {participantsData.creator.username}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Ont participé */}
+                    {participantsData.participants.length > 0 && (
+                      <div className="flex gap-2 items-start w-full text-sm flex-wrap">
+                        <p className="font-['Inter:Bold',sans-serif] font-bold text-gray-700 flex-shrink-0">
+                          {t(language, "ontParticipe")}:
+                        </p>
+                        <p className="font-['Inter:Regular',sans-serif] font-normal text-black">
+                          {participantsData.participants
+                            .filter(
+                              (p) =>
+                                !participantsData.creator ||
+                                p.user_id !== participantsData.creator.id,
+                            )
+                            .map((p) => p.username)
+                            .join(", ")}
+                        </p>
+                      </div>
+                    )}
+
+                    {isAuthenticated && (
+                      <>
+                        {/* Bouton Historique */}
+                        <button
+                          onClick={() => setShowHistoryModal(true)}
+                          className="w-full text-sm md:text-base font-['Inter:Regular',sans-serif] font-normal text-primary hover:text-primary-dark underline py-2 transition-colors text-left"
+                          title="Voir l'historique des modifications"
+                        >
+                          Historique
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
-              )}
             </div>
-          </div>
           )}
         </div>
       </div>
@@ -704,7 +866,11 @@ export default function ArticlePage() {
               Confirmation de suppression
             </p>
             <p className="font-['Inter:Regular',sans-serif] font-normal text-sm sm:text-base text-gray-700 mb-6">
-              Êtes-vous sûr de vouloir supprimer l'article "<span className="font-bold">{language === "FR" ? article?.title_fr : article?.title_en}</span>" ? Cette action est irréversible.
+              Êtes-vous sûr de vouloir supprimer l'article "
+              <span className="font-bold">
+                {language === "FR" ? article?.title_fr : article?.title_en}
+              </span>
+              " ? Cette action est irréversible.
             </p>
             <div className="flex gap-3 sm:gap-4">
               <button
@@ -724,8 +890,52 @@ export default function ArticlePage() {
         </div>
       )}
 
+      {/* Modal Historique */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-sm max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-lg flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 sm:p-8 border-b border-gray-200">
+              <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl text-black">
+                Historique des modifications
+              </p>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto flex-1 p-2 sm:p-4">
+              <div className="">
+                {participantsData?.history && participantsData.history.length > 0 ? (
+                  participantsData.history.map((entry, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-3 sm:p-4 rounded-sm transition-colors flex-wrap border-b-2 border-gray-100"
+                    >
+                      <p className="font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base text-primary whitespace-nowrap">
+                        {entry.username}
+                      </p>
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                        {formatDateTime(entry.added_at, language)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="font-['Inter:Regular',sans-serif] font-normal text-sm text-gray-600 italic">
+                    Aucun historique disponible
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
-    
   );
 }

@@ -79,6 +79,22 @@ const getFileUrl = (filePath) => {
   return null;
 };
 
+// ✅ Helper: Enregistrer la participation d'un utilisateur à un projet
+// Ajoute une nouvelle ligne à chaque modification (historique de chaque participation/modification)
+// Y compris le créateur du projet
+const registerUserParticipation = async (projectId, userId) => {
+  if (!db) return;
+  
+  try {
+    // Insérer une nouvelle ligne de participation (historique)
+    const insertStmt = db.prepare("INSERT INTO user_participation (project_id, user_id) VALUES (?, ?)");
+    await insertStmt.run(projectId, userId);
+    console.log(`📝 Participation enregistrée pour l'utilisateur ${userId} au projet ${projectId}`);
+  } catch (err) {
+    console.error(`❌ Erreur lors de l'enregistrement de la participation:`, err);
+  }
+};
+
 try {
   db = require("../db/database");
   console.log("✅ DB chargée");
@@ -235,6 +251,9 @@ router.post("/",
         console.log(`✅ Image de présentation mise à jour: ${filePresentName}`);
       }
 
+      // 📝 Enregistrer le créateur dans user_participation
+      await registerUserParticipation(projectId, req.user.userId);
+
       res.json({ id: projectId, message: "Projet créé avec succès" });
     } catch (err) {
       console.error("Create project error:", err);
@@ -282,6 +301,9 @@ router.post("/:projectId/upload",
       console.log(`Fichier sauvegardé: ${uploadPath}`);
     }
 
+    // 📝 Enregistrer la participation de l'utilisateur (s'il n'est pas le créateur)
+    await registerUserParticipation(projectId, req.user.userId);
+
     res.json({ message: "Fichiers uploadés avec succès" });
   } catch (err) {
     console.error("Upload files error:", err);
@@ -292,7 +314,7 @@ router.post("/:projectId/upload",
 // GET ALL PROJECT FILES - GET /api/projects/files/all (DOIT VENIR AVANT /:projectId)
 router.get("/files/all", requireDB, async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc, is_present_image, created_at, project_id FROM project_files ORDER BY created_at DESC");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, is_present_image, created_at, project_id FROM project_files ORDER BY created_at DESC");
     const rows = await stmt.all();
     console.log("📁 Fichiers récupérés de la DB:", JSON.stringify(rows.slice(0, 3), null, 2));
     
@@ -383,7 +405,7 @@ router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req,
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
 router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc, is_present_image, created_at, project_id FROM project_files WHERE project_id = ? ORDER BY created_at");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, is_present_image, created_at, project_id FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
     const filesWithUrls = rows.map(row => ({
       ...row,
@@ -393,6 +415,92 @@ router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async
   } catch (err) {
     console.error("Get files error:", err);
     return res.status(500).json({ error: "Erreur lors de la récupération des fichiers" });
+  }
+});
+
+// GET PARTICIPANTS OF PROJECT - GET /api/projects/:projectId/participants
+router.get("/:projectId/participants", requireDB, validateNumericId('projectId'), async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
+    console.log(`📋 Récupération des participants pour le projet ${projectId}`);
+    
+    // Vérifier que le projet existe
+    const projectStmt = db.prepare("SELECT created_by FROM projects WHERE id = ?");
+    const project = await projectStmt.get(projectId);
+    
+    if (!project) {
+      console.log(`⚠️ Projet ${projectId} non trouvé`);
+      return res.status(404).json({ error: "Projet non trouvé" });
+    }
+    
+    console.log(`✓ Projet trouvé, créateur: ${project.created_by}`);
+    
+    // Vérifier que la table user_participation existe
+    let participationHistory = [];
+    try {
+      const participationStmt = db.prepare(`
+        SELECT 
+          up.id,
+          up.user_id,
+          up.project_id,
+          up.added_at,
+          u.username,
+          u.email,
+          u.role
+        FROM user_participation up
+        JOIN users u ON up.user_id = u.id
+        WHERE up.project_id = ?
+        ORDER BY up.added_at DESC
+      `);
+      participationHistory = await participationStmt.all(projectId);
+      console.log(`✓ ${participationHistory.length} participations trouvées`);
+    } catch (tableErr) {
+      console.warn(`⚠️ Impossible de récupérer les participations:`, tableErr.message);
+      // La table n'existe peut-être pas encore, on continue avec une liste vide
+      participationHistory = [];
+    }
+    
+    // Récupérer les participants uniques avec leur dernière participation
+    const uniqueParticipants = {};
+    participationHistory.forEach(entry => {
+      if (!uniqueParticipants[entry.user_id]) {
+        uniqueParticipants[entry.user_id] = {
+          user_id: entry.user_id,
+          username: entry.username,
+          email: entry.email,
+          role: entry.role,
+          first_participation: entry.added_at,
+          last_participation: entry.added_at,
+          modification_count: 1
+        };
+      } else {
+        uniqueParticipants[entry.user_id].first_participation = entry.added_at;
+        uniqueParticipants[entry.user_id].modification_count++;
+      }
+    });
+    
+    // Récupérer les infos du créateur
+    let creator = null;
+    if (project.created_by) {
+      const creatorStmt = db.prepare("SELECT id, username, email, role FROM users WHERE id = ?");
+      creator = await creatorStmt.get(project.created_by);
+      console.log(`✓ Créateur trouvé: ${creator?.username || 'inconnu'}`);
+    }
+    
+    res.json({
+      creator,
+      participants: Object.values(uniqueParticipants),
+      total_participants: Object.keys(uniqueParticipants).length,
+      total_modifications: participationHistory.length,
+      history: participationHistory
+    });
+  } catch (err) {
+    console.error("❌ Get participants error:", err.message);
+    console.error("Stack:", err.stack);
+    return res.status(500).json({ 
+      error: "Erreur lors de la récupération des participants",
+      details: err.message 
+    });
   }
 });
 
@@ -476,17 +584,21 @@ router.put("/:projectId/file/:fileId/rename",
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { new_name, file_desc } = req.body;
+    const { new_name, file_desc_fr } = req.body;
 
     try {
-      const stmt = db.prepare("UPDATE project_files SET file_display_name = ?, file_desc = ? WHERE id = ? AND project_id = ?");
-      const result = await stmt.run(new_name, file_desc || null, req.params.fileId, req.params.projectId);
+      const stmt = db.prepare("UPDATE project_files SET file_display_name = ?, file_desc_fr = ? WHERE id = ? AND project_id = ?");
+      const result = await stmt.run(new_name, file_desc_fr || null, req.params.fileId, req.params.projectId);
       
       if (result.changes === 0) {
         return res.status(404).json({ error: "Fichier non trouvé ou non autorisé" });
       }
       
-      console.log(`✓ Fichier ${req.params.fileId} modifié: nom="${new_name}", desc="${file_desc || 'null'}"`);
+      console.log(`✓ Fichier ${req.params.fileId} modifié: nom="${new_name}", desc="${file_desc_fr || 'null'}"`);
+      
+      // 📝 Enregistrer la participation de l'utilisateur (s'il n'est pas le créateur)
+      await registerUserParticipation(req.params.projectId, req.user.userId);
+      
       res.json({ message: "Fichier modifié avec succès" });
     } catch (err) {
       console.error("Rename file error:", err);
@@ -584,6 +696,9 @@ router.delete("/:projectId/file/:fileId",
           }
         }
       }
+
+      // 📝 Enregistrer la participation de l'utilisateur (s'il n'est pas le créateur)
+      await registerUserParticipation(req.params.projectId, req.user.userId);
 
       res.json({ message: "Fichier supprimé avec succès" });
     } catch (err) {
@@ -685,6 +800,9 @@ router.put("/:projectId",
         req.params.projectId
       );
       console.log(`✅ Projet ${req.params.projectId} mis à jour`);
+
+      // 📝 Enregistrer la participation de l'utilisateur (s'il n'est pas le créateur)
+      await registerUserParticipation(req.params.projectId, req.user.userId);
 
       // Supprimer les anciens contenus
       const deleteContentStmt = db.prepare("DELETE FROM project_contents WHERE project_id = ?");

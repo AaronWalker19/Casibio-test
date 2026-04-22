@@ -113,7 +113,7 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose, currentA
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[18px] text-white">
             {currentFile.file_display_name}
           </p>
-          {currentFile.file_desc && (
+          {currentFile.file_desc_fr && (
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-white mt-[8px] opacity-90">
               {currentFile.file_desc}
             </p>

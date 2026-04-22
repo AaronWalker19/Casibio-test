@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS project_files (
   file_name VARCHAR(255) COMMENT 'Nom du fichier stocké',
   file_display_name VARCHAR(255) COMMENT 'Nom du fichier affichable',
   file_type VARCHAR(100) COMMENT 'Type MIME du fichier (image/png, application/pdf, etc)',
-  file_desc VARCHAR(150) COMMENT 'Description du fichier (max 150 caractères)',
+  file_desc_fr VARCHAR(150) COMMENT 'Description du fichier (max 150 caractères)',
+  is_present_image BOOLEAN DEFAULT FALSE COMMENT 'Indique si c\'est l\'image de présentation du projet',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'upload',
   
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
@@ -70,6 +71,42 @@ CREATE TABLE IF NOT EXISTS project_files (
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Table des fichiers associés aux projets';
+
+-- ============================================
+-- Table: project_contents (Contenus/sections d'un projet)
+-- ============================================
+CREATE TABLE IF NOT EXISTS project_contents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL COMMENT 'ID du projet',
+  title_fr VARCHAR(255) COMMENT 'Titre en français',
+  title_en VARCHAR(255) COMMENT 'Titre en anglais',
+  content_fr LONGTEXT COMMENT 'Contenu en français',
+  content_en LONGTEXT COMMENT 'Contenu en anglais',
+  position INT DEFAULT 1 COMMENT 'Position de la section (ordre)',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
+  
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  INDEX idx_project_id (project_id),
+  INDEX idx_position (position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Table des contenus/sections des projets';
+
+-- ============================================
+-- Table: user_participation (Historique des participants d'un projet)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_participation (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL COMMENT 'ID du projet',
+  user_id INT NOT NULL COMMENT 'ID de l\'utilisateur participant',
+  added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de cette participation/modification',
+  
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_project_id (project_id),
+  INDEX idx_user_id (user_id),
+  INDEX idx_added_at (added_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Table de l\'historique de participation/modifications aux projets (chaque modification crée une nouvelle ligne)';
 
 -- ============================================
 -- Insertions de données initiales (optionnel)

@@ -203,7 +203,7 @@ app.post("/api/admin/init-db", async (req, res) => {
           file_name VARCHAR(255),
           file_display_name VARCHAR(255),
           file_type VARCHAR(100),
-          file_desc VARCHAR(150),
+          file_desc_fr  VARCHAR(150),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
           INDEX idx_project_id (project_id),

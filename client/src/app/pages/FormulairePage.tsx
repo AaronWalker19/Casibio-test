@@ -265,7 +265,7 @@ export default function FormulairePage() {
     setEditingFileId(file.id);
     setEditingFileData({
       name: file.file_display_name || "",
-      description: file.file_desc || ""
+      description: file.file_desc_fr || ""
     });
   };
 
@@ -784,7 +784,7 @@ export default function FormulairePage() {
                                     <p className="text-xs sm:text-sm text-gray-500">
                                       {file.file_type}
                                     </p>
-                                    {file.file_desc && (
+                                    {file.file_desc_fr && (
                                       <p className="text-xs text-gray-600 mt-1 truncate">
                                         {file.file_desc}
                                       </p>
