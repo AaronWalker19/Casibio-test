@@ -53,6 +53,9 @@ interface GalleryImage {
   file_path: string;
   file_type: string;
   created_at: string;
+  project_id?: number;
+  file_desc?: string;
+  is_present_image?: boolean;
 }
 
 // Fonction pour formater les dates correctement
@@ -318,23 +321,30 @@ export default function ArticlePage() {
         <div className="h-40 sm:h-56 md:h-64 lg:h-80 w-full rounded-sm overflow-hidden">
           <ImageWithFallback
             src={
-              projectFiles.filter((f) =>
-                f.file_type?.toLowerCase().startsWith("image/"),
-              ).sort(
-                (a, b) =>
-                  parseDate(b.created_at).getTime() -
-                  parseDate(a.created_at).getTime(),
-              ).length > 0
-                ? projectFiles
-                    .filter((f) =>
-                      f.file_type?.toLowerCase().startsWith("image/"),
-                    )
-                    .sort(
-                      (a, b) =>
-                        parseDate(b.created_at).getTime() -
-                        parseDate(a.created_at).getTime(),
-                    )[0].file_path
-                : "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop"
+              (() => {
+                // Filtrer les images
+                const images = projectFiles.filter((f) =>
+                  f.file_type?.toLowerCase().startsWith("image/"),
+                );
+                
+                if (images.length === 0) {
+                  return "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop";
+                }
+                
+                // D'abord chercher l'image avec is_present_image = true
+                const presentImage = images.find((img) => img.is_present_image);
+                if (presentImage) {
+                  return presentImage.file_path;
+                }
+                
+                // Sinon, trier par date décroissante et prendre la plus récente
+                const sortedImages = images.sort(
+                  (a, b) =>
+                    parseDate(b.created_at).getTime() -
+                    parseDate(a.created_at).getTime(),
+                );
+                return sortedImages[0].file_path;
+              })()
             }
             alt={article.title_fr}
             className="w-full h-full object-cover"
@@ -682,6 +692,8 @@ export default function ArticlePage() {
             : selectedMediaIndex
         }
         onClose={() => setLightboxOpen(false)}
+        pageType="article"
+        currentArticleId={id ? parseInt(id) : undefined}
       />
 
       {/* Popup de confirmation de suppression */}

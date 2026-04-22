@@ -45,6 +45,9 @@ interface GalleryImage {
   file_path: string;
   file_type: string;
   created_at: string;
+  project_id?: number;
+  file_desc?: string;
+  is_present_image?: boolean;
 }
 
 
@@ -123,19 +126,26 @@ export default function HomePage() {
             if (filesResponse.ok) {
               const files = await filesResponse.json();
               if (files.length > 0) {
-                // Filtrer et trier les images par date (la plus récente d'abord)
+                // Filtrer les images
                 const imagesOnly = files.filter((f: any) => 
                   f.file_type?.toLowerCase().includes('image') ||
                   f.file_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
                 );
                 
                 if (imagesOnly.length > 0) {
-                  // Trier par date décroissante (plus récent d'abord)
-                  const sortedImages = imagesOnly.sort((a: any, b: any) => {
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                  });
-                  // Prendre l'image la plus récente
-                  imagesMap[article.id] = sortedImages[0].file_path;
+                  // D'abord chercher l'image avec is_present_image = true
+                  const presentImage = imagesOnly.find((img: any) => img.is_present_image);
+                  
+                  if (presentImage) {
+                    // Utiliser l'image de présentation
+                    imagesMap[article.id] = presentImage.file_path;
+                  } else {
+                    // Sinon, trier par date décroissante et prendre la plus récente
+                    const sortedImages = imagesOnly.sort((a: any, b: any) => {
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    });
+                    imagesMap[article.id] = sortedImages[0].file_path;
+                  }
                 }
               }
             }
@@ -162,20 +172,27 @@ export default function HomePage() {
           throw new Error(t(language, "erreurChargementImages"));
         }
         const data = await response.json();
-        // Filtrer les images (exclure les vidéos) et trier par date décroissante
+        // Filtrer les images (exclure les vidéos)
         const imagesOnly = data.filter((file: GalleryImage) => {
           const isImage = file.file_type?.toLowerCase().includes('image') ||
                          file.file_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
           return isImage;
         });
         
-        // Trier par date décroissante (plus récent en premier)
-        const sortedImages = imagesOnly.sort((a: GalleryImage, b: GalleryImage) => {
+        // Séparer les images de présentation et les autres
+        const presentImages = imagesOnly.filter((img: GalleryImage) => img.is_present_image);
+        const otherImages = imagesOnly.filter((img: GalleryImage) => !img.is_present_image);
+        
+        // Trier les autres images par date décroissante
+        otherImages.sort((a: GalleryImage, b: GalleryImage) => {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
         
-        // Prendre les 3 premières images triées par date
-        const recentImages = sortedImages.slice(0, 3);
+        // Combiner : images de présentation d'abord, puis les autres triées
+        const combinedImages = [...presentImages, ...otherImages];
+        
+        // Prendre les 3 premières images
+        const recentImages = combinedImages.slice(0, 3);
         setGalleryImagesFetched(recentImages);
         setLoadingGallery(false);
       } catch (err) {
@@ -384,6 +401,7 @@ export default function HomePage() {
         files={galleryImagesFetched}
         initialIndex={selectedImageIndex}
         onClose={() => setLightboxOpen(false)}
+        pageType="home"
       />
       <Footer />
     </div>

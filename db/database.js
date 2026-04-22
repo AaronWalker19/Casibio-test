@@ -91,11 +91,52 @@ async function createTables() {
         file_name VARCHAR(255),
         file_display_name VARCHAR(255),
         file_type VARCHAR(100),
+        file_desc VARCHAR(150),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         INDEX idx_project_id (project_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    // Ajouter la colonne file_desc si elle n'existe pas (migration)
+    try {
+      const [columns] = await connection.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'project_files' 
+         AND COLUMN_NAME = 'file_desc'`
+      );
+      
+      if (columns.length === 0) {
+        // La colonne n'existe pas, on la crée
+        await connection.execute(
+          "ALTER TABLE project_files ADD COLUMN file_desc VARCHAR(150) AFTER file_type"
+        );
+        console.log("✓ Colonne 'file_desc' ajoutée à la table 'project_files'");
+      }
+    } catch (err) {
+      console.warn("⚠️ Impossible de vérifier/ajouter la colonne file_desc:", err.message);
+    }
+
+    // Ajouter la colonne is_present_image si elle n'existe pas (migration)
+    try {
+      const [columns] = await connection.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'project_files' 
+         AND COLUMN_NAME = 'is_present_image'`
+      );
+      
+      if (columns.length === 0) {
+        // La colonne n'existe pas, on la crée
+        await connection.execute(
+          "ALTER TABLE project_files ADD COLUMN is_present_image BOOLEAN DEFAULT FALSE AFTER file_desc"
+        );
+        console.log("✓ Colonne 'is_present_image' ajoutée à la table 'project_files'");
+      }
+    } catch (err) {
+      console.warn("⚠️ Impossible de vérifier/ajouter la colonne is_present_image:", err.message);
+    }
 
     console.log("✓ Tables créées/vérifiées");
   } catch (err) {

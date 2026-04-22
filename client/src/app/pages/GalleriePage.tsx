@@ -13,6 +13,9 @@ interface GalleryFile {
   file_path: string;
   file_type: string;
   created_at: string;
+  project_id?: number;
+  file_desc?: string;
+  is_present_image?: boolean;
 }
 
 // Fonction pour formater les dates correctement
@@ -77,6 +80,11 @@ export default function GalleriePage() {
 
   // Trier les images
   const sortedImages = [...filteredImages].sort((a, b) => {
+    // D'abord, mettre les images de présentation en premier
+    if (a.is_present_image && !b.is_present_image) return -1;
+    if (!a.is_present_image && b.is_present_image) return 1;
+    
+    // Ensuite, appliquer le tri par date
     if (sortBy === "date-asc") {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     }
@@ -209,6 +217,7 @@ export default function GalleriePage() {
         files={sortedImages}
         initialIndex={selectedImageIndex}
         onClose={() => setLightboxOpen(false)}
+        pageType="gallery"
       />
 
       <Footer />

@@ -30,6 +30,8 @@ export default function FormulairePage() {
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
   const [expandedContent, setExpandedContent] = useState<number | null>(null);
+  const [editingFileId, setEditingFileId] = useState<number | null>(null);
+  const [editingFileData, setEditingFileData] = useState({ name: "", description: "" });
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
@@ -73,6 +75,12 @@ export default function FormulairePage() {
           if (response.ok) {
             const filesData = await response.json();
             setExistingFiles(Array.isArray(filesData) ? filesData : filesData.files || []);
+            
+            // Trouver l'image de présentation existante
+            const presentFile = filesData.find((file: any) => file.is_present_image);
+            if (presentFile) {
+              setPresentImageFile(presentFile.file_name);
+            }
           } else {
             console.warn("Impossible de récupérer les fichiers");
           }
@@ -202,16 +210,114 @@ export default function FormulairePage() {
   };
 
   // Marquer/démarquer une image existante comme image de présentation
-  const togglePresentImageExisting = (fileName: string) => {
-    if (presentImageFile === fileName) {
-      setPresentImageFile(null);
-    } else {
-      // Vérifier que c'est une image
-      if (fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        setPresentImageFile(fileName);
-      } else {
-        setError("Seules les images peuvent être marquées comme image de présentation (jpg, png, gif, webp)");
+  const togglePresentImageExisting = async (fileName: string, fileId: number) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        return;
       }
+
+      const isCurrentlyPresent = presentImageFile === fileName;
+      
+      // Appel API pour mettre à jour la base de données
+      const response = await fetch(`/api/projects/${editingArticleId}/set-present-image`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          file_name: isCurrentlyPresent ? null : fileName,
+          file_id: isCurrentlyPresent ? null : fileId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la mise à jour");
+      }
+
+      // Mettre à jour l'état local
+      if (isCurrentlyPresent) {
+        setPresentImageFile(null);
+      } else {
+        // Vérifier que c'est une image
+        if (fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          setPresentImageFile(fileName);
+        } else {
+          setError("Seules les images peuvent être marquées comme image de présentation (jpg, png, gif, webp)");
+          return;
+        }
+      }
+
+      setError("");
+      console.log(`✅ Image de présentation mise à jour: ${isCurrentlyPresent ? "désactivée" : "activée"}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour");
+      console.error("Erreur toggle présentation:", err);
+    }
+  };
+
+  // Ouvrir le formulaire d'édition d'un fichier
+  const handleEditFile = (file: any) => {
+    setEditingFileId(file.id);
+    setEditingFileData({
+      name: file.file_display_name || "",
+      description: file.file_desc || ""
+    });
+  };
+
+  // Sauvegarder les modifications d'un fichier
+  const handleSaveFileEdit = async () => {
+    if (!editingFileData.name.trim()) {
+      setError("Le nom du fichier est obligatoire");
+      return;
+    }
+
+    if (editingFileData.description.length > 150) {
+      setError("La description ne doit pas dépasser 150 caractères");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        return;
+      }
+
+      const response = await fetch(`/api/projects/${editingArticleId}/file/${editingFileId}/rename`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          new_name: editingFileData.name,
+          file_desc: editingFileData.description || null
+        })
+      });
+
+      if (response.ok) {
+        // Mettre à jour le fichier dans la liste
+        const updatedFiles = existingFiles.map((file) =>
+          file.id === editingFileId
+            ? { ...file, file_display_name: editingFileData.name, file_desc: editingFileData.description }
+            : file
+        );
+        setExistingFiles(updatedFiles);
+        setEditingFileId(null);
+        setEditingFileData({ name: "", description: "" });
+        setError("");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Erreur lors de la modification du fichier");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la modification du fichier");
     }
   };
 
@@ -605,6 +711,65 @@ export default function FormulairePage() {
                           {existingFiles.map((file) => {
                             const isImage = file.file_type.startsWith('image/');
                             const isPresent = presentImageFile === file.file_name;
+                            const isEditing = editingFileId === file.id;
+                            
+                            if (isEditing) {
+                              return (
+                                <div
+                                  key={file.id}
+                                  className="bg-gray-50 border-2 border-blue-400 p-4 sm:p-5 rounded-sm w-full flex flex-col gap-4"
+                                >
+                                  <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Nom du fichier *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={editingFileData.name}
+                                      onChange={(e) => setEditingFileData({ ...editingFileData, name: e.target.value })}
+                                      maxLength={255}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                      placeholder="Nom du fichier"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Description (max 150 caractères)
+                                    </label>
+                                    <textarea
+                                      value={editingFileData.description}
+                                      onChange={(e) => setEditingFileData({ ...editingFileData, description: e.target.value.slice(0, 150) })}
+                                      maxLength={150}
+                                      rows={3}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm resize-none"
+                                      placeholder="Description optionnelle (max 150 caractères)"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {editingFileData.description.length}/150 caractères
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveFileEdit}
+                                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                                    >
+                                      Sauvegarder
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingFileId(null);
+                                        setEditingFileData({ name: "", description: "" });
+                                      }}
+                                      className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded text-sm font-medium transition-colors"
+                                    >
+                                      Annuler
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
                             
                             return (
                               <div
@@ -619,13 +784,25 @@ export default function FormulairePage() {
                                     <p className="text-xs sm:text-sm text-gray-500">
                                       {file.file_type}
                                     </p>
+                                    {file.file_desc && (
+                                      <p className="text-xs text-gray-600 mt-1 truncate">
+                                        {file.file_desc}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-2">
+                                <div className="flex items-center gap-2 ml-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditFile(file)}
+                                    className="bg-blue-100 hover:bg-blue-200 text-blue-600 px-3 py-1 rounded text-sm font-medium transition-colors"
+                                  >
+                                    Modifier
+                                  </button>
                                   {isImage && (
                                     <button
                                       type="button"
-                                      onClick={() => togglePresentImageExisting(file.file_name)}
+                                      onClick={() => togglePresentImageExisting(file.file_name, file.id)}
                                       className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                                         isPresent
                                           ? "bg-blue-500 text-white"

@@ -63,19 +63,26 @@ export default function ArticlesPage() {
             if (filesResponse.ok) {
               const files = await filesResponse.json();
               if (files.length > 0) {
-                // Filtrer et trier les images par date (la plus récente d'abord)
+                // Filtrer les images
                 const imagesOnly = files.filter((f: any) => 
                   f.file_type?.toLowerCase().includes('image') ||
                   f.file_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
                 );
                 
                 if (imagesOnly.length > 0) {
-                  // Trier par date décroissante (plus récent d'abord)
-                  const sortedImages = imagesOnly.sort((a: any, b: any) => {
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                  });
-                  // Prendre l'image la plus récente
-                  imagesMap[article.id] = sortedImages[0].file_path;
+                  // D'abord chercher l'image avec is_present_image = true
+                  const presentImage = imagesOnly.find((img: any) => img.is_present_image);
+                  
+                  if (presentImage) {
+                    // Utiliser l'image de présentation
+                    imagesMap[article.id] = presentImage.file_path;
+                  } else {
+                    // Sinon, trier par date décroissante et prendre la plus récente
+                    const sortedImages = imagesOnly.sort((a: any, b: any) => {
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    });
+                    imagesMap[article.id] = sortedImages[0].file_path;
+                  }
                 }
               }
             }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useLanguage } from "../../contexts/LanguageContext.tsx";
 import { ImageWithFallback } from "./figma/ImageWithFallback.tsx";
+import { t } from "../../contexts/translations.tsx";
 
 interface GalleryFile {
   id: number;
@@ -9,6 +11,9 @@ interface GalleryFile {
   file_path: string;
   file_type: string;
   created_at: string;
+  project_id?: number;
+  file_desc?: string;
+  is_present_image?: boolean;
 }
 
 interface GalleryLightboxProps {
@@ -16,10 +21,13 @@ interface GalleryLightboxProps {
   files: GalleryFile[];
   initialIndex: number;
   onClose: () => void;
+  currentArticleId?: number;
+  pageType?: "home" | "gallery" | "article";
 }
 
-export function GalleryLightbox({ isOpen, files, initialIndex, onClose }: GalleryLightboxProps) {
+export function GalleryLightbox({ isOpen, files, initialIndex, onClose, currentArticleId, pageType }: GalleryLightboxProps) {
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   useEffect(() => {
@@ -32,6 +40,19 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose }: Galler
   const isFirstImage = currentIndex === 0;
   const isLastImage = currentIndex === files.length - 1;
   const isVideo = currentFile.file_type?.toLowerCase().includes('video') || currentFile.file_type?.toLowerCase().includes('mp4') || currentFile.file_type?.toLowerCase().includes('webm');
+
+  // Déterminer si on doit afficher le bouton de navigation vers l'article
+  const showArticleButton = 
+    currentFile.project_id !== undefined && 
+    (pageType === "home" || pageType === "gallery") &&
+    currentFile.project_id !== currentArticleId;
+
+  const handleNavigateToArticle = () => {
+    if (currentFile.project_id) {
+      navigate(`/articles/${currentFile.project_id}`);
+      onClose();
+    }
+  };
 
   const handlePrevious = () => {
     if (!isFirstImage) {
@@ -92,6 +113,11 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose }: Galler
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[18px] text-white">
             {currentFile.file_display_name}
           </p>
+          {currentFile.file_desc && (
+            <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-white mt-[8px] opacity-90">
+              {currentFile.file_desc}
+            </p>
+          )}
           <div className="flex items-center gap-[10px] mt-[8px]">
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[12px] text-white opacity-70">
               {currentIndex + 1} / {files.length}
@@ -146,6 +172,21 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose }: Galler
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+
+        {/* Bouton Aller à l'article */}
+        {showArticleButton && (
+          <button
+            onClick={handleNavigateToArticle}
+            className="absolute top-[20px] right-[70px] p-[10px] bg-error-accent hover:bg-error text-white rounded-full transition-all flex items-center gap-2"
+            aria-label={t(language, "allerArticle")}
+            title={t(language, "allerArticle")}
+          >
+            <svg className="w-[24px] h-[24px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-semibold">{t(language, "allerArticle")}</span>
+          </button>
+        )}
       </div>
     </div>
   );

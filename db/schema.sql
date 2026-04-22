@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS project_files (
   file_name VARCHAR(255) COMMENT 'Nom du fichier stocké',
   file_display_name VARCHAR(255) COMMENT 'Nom du fichier affichable',
   file_type VARCHAR(100) COMMENT 'Type MIME du fichier (image/png, application/pdf, etc)',
+  file_desc VARCHAR(150) COMMENT 'Description du fichier (max 150 caractères)',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'upload',
   
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,

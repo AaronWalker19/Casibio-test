@@ -224,6 +224,17 @@ router.post("/",
         }
       }
 
+      // Gérer l'image de présentation
+      const filePresentName = req.body.file_present;
+      if (filePresentName) {
+        console.log(`🖼️ Image de présentation sélectionnée: ${filePresentName}`);
+        
+        // Mettre à jour le fichier spécifié
+        const updatePresentStmt = db.prepare("UPDATE project_files SET is_present_image = TRUE WHERE project_id = ? AND file_name = ?");
+        await updatePresentStmt.run(projectId, filePresentName);
+        console.log(`✅ Image de présentation mise à jour: ${filePresentName}`);
+      }
+
       res.json({ id: projectId, message: "Projet créé avec succès" });
     } catch (err) {
       console.error("Create project error:", err);
@@ -281,7 +292,7 @@ router.post("/:projectId/upload",
 // GET ALL PROJECT FILES - GET /api/projects/files/all (DOIT VENIR AVANT /:projectId)
 router.get("/files/all", requireDB, async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at, project_id FROM project_files ORDER BY created_at DESC");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc, is_present_image, created_at, project_id FROM project_files ORDER BY created_at DESC");
     const rows = await stmt.all();
     console.log("📁 Fichiers récupérés de la DB:", JSON.stringify(rows.slice(0, 3), null, 2));
     
@@ -372,7 +383,7 @@ router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req,
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
 router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, created_at FROM project_files WHERE project_id = ? ORDER BY created_at");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc, is_present_image, created_at, project_id FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
     const filesWithUrls = rows.map(row => ({
       ...row,
@@ -456,7 +467,8 @@ router.put("/:projectId/file/:fileId/rename",
   validateNumericId('projectId'),
   validateNumericId('fileId'),
   [
-    check('new_name').trim().isLength({ min: 1, max: 255 }).notEmpty()
+    check('new_name').trim().isLength({ min: 1, max: 255 }).notEmpty(),
+    check('file_desc').optional().trim().isLength({ max: 150 })
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -464,15 +476,79 @@ router.put("/:projectId/file/:fileId/rename",
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { new_name } = req.body;
+    const { new_name, file_desc } = req.body;
 
     try {
-      const stmt = db.prepare("UPDATE project_files SET file_display_name = ? WHERE id = ? AND project_id = ?");
-      await stmt.run(new_name, req.params.fileId, req.params.projectId);
-      res.json({ message: "Fichier renommé avec succès" });
+      const stmt = db.prepare("UPDATE project_files SET file_display_name = ?, file_desc = ? WHERE id = ? AND project_id = ?");
+      const result = await stmt.run(new_name, file_desc || null, req.params.fileId, req.params.projectId);
+      
+      if (result.changes === 0) {
+        return res.status(404).json({ error: "Fichier non trouvé ou non autorisé" });
+      }
+      
+      console.log(`✓ Fichier ${req.params.fileId} modifié: nom="${new_name}", desc="${file_desc || 'null'}"`);
+      res.json({ message: "Fichier modifié avec succès" });
     } catch (err) {
       console.error("Rename file error:", err);
-      return res.status(500).json({ error: "Erreur lors du renommage" });
+      return res.status(500).json({ error: "Erreur lors de la modification: " + err.message });
+    }
+  }
+);
+
+// SET PRESENT IMAGE - PUT /api/projects/:projectId/set-present-image
+router.put("/:projectId/set-present-image", 
+  requireDB, 
+  authenticateToken,
+  validateNumericId('projectId'),
+  async (req, res) => {
+    const { file_id, file_name } = req.body;
+
+    try {
+      // Vérifier que le projet existe et que l'utilisateur y a accès
+      const projectStmt = db.prepare("SELECT created_by FROM projects WHERE id = ?");
+      const project = await projectStmt.get(req.params.projectId);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Projet non trouvé" });
+      }
+
+      if (project.created_by !== req.user.userId) {
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+
+      // Réinitialiser tous les flags is_present_image à FALSE pour ce projet
+      const resetStmt = db.prepare("UPDATE project_files SET is_present_image = FALSE WHERE project_id = ?");
+      await resetStmt.run(req.params.projectId);
+      console.log(`✅ Images de présentation réinitialisées pour le projet ${req.params.projectId}`);
+
+      // Si un file_id ou file_name est fourni, le marquer comme image de présentation
+      if (file_id || file_name) {
+        let updateStmt;
+        let params;
+        
+        if (file_id) {
+          updateStmt = db.prepare("UPDATE project_files SET is_present_image = TRUE WHERE id = ? AND project_id = ?");
+          params = [file_id, req.params.projectId];
+        } else {
+          updateStmt = db.prepare("UPDATE project_files SET is_present_image = TRUE WHERE file_name = ? AND project_id = ?");
+          params = [file_name, req.params.projectId];
+        }
+        
+        const result = await updateStmt.run(...params);
+        
+        if (result.changes === 0) {
+          return res.status(404).json({ error: "Fichier non trouvé" });
+        }
+        
+        console.log(`🖼️ Image de présentation définie: ${file_id || file_name}`);
+      } else {
+        console.log(`🖼️ Image de présentation désactivée`);
+      }
+
+      res.json({ message: "Image de présentation mise à jour avec succès" });
+    } catch (err) {
+      console.error("Set present image error:", err);
+      return res.status(500).json({ error: "Erreur lors de la mise à jour: " + err.message });
     }
   }
 );
@@ -656,6 +732,22 @@ router.put("/:projectId",
           await fileStmt.run(req.params.projectId, uniqueFileName, uniqueFileName, file.originalname, file.mimetype);
           console.log(`✅ Fichier ajouté lors de la mise à jour: ${uploadPath}`);
         }
+      }
+
+      // Gérer l'image de présentation
+      const filePresentName = req.body.file_present;
+      if (filePresentName) {
+        console.log(`🖼️ Image de présentation sélectionnée: ${filePresentName}`);
+        
+        // Réinitialiser is_present_image à FALSE pour tous les fichiers du projet
+        const resetPresentStmt = db.prepare("UPDATE project_files SET is_present_image = FALSE WHERE project_id = ?");
+        await resetPresentStmt.run(req.params.projectId);
+        console.log(`✅ Images de présentation réinitialisées`);
+        
+        // Mettre à jour le fichier spécifié
+        const updatePresentStmt = db.prepare("UPDATE project_files SET is_present_image = TRUE WHERE project_id = ? AND file_name = ?");
+        await updatePresentStmt.run(req.params.projectId, filePresentName);
+        console.log(`✅ Image de présentation mise à jour: ${filePresentName}`);
       }
 
       res.json({ message: "Projet modifié avec succès" });
