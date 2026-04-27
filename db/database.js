@@ -52,10 +52,12 @@ async function createTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(100) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255),
         name VARCHAR(255),
         role ENUM('admin', 'member') DEFAULT 'member',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        is_active BOOLEAN DEFAULT FALSE COMMENT 'Compte activé ou non',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        activated_at TIMESTAMP NULL COMMENT 'Date d\'activation du compte'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
@@ -64,6 +66,20 @@ async function createTables() {
       await connection.execute(`ALTER TABLE users ADD COLUMN name VARCHAR(255)`);
     } catch (err) {
       // La colonne existe déjà, c'est normal
+      if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+    }
+
+    // Ajouter la colonne is_active si elle n'existe pas
+    try {
+      await connection.execute(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT FALSE`);
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+    }
+
+    // Ajouter la colonne activated_at si elle n'existe pas
+    try {
+      await connection.execute(`ALTER TABLE users ADD COLUMN activated_at TIMESTAMP NULL`);
+    } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') throw err;
     }
 
@@ -101,6 +117,8 @@ async function createTables() {
         file_display_name VARCHAR(255),
         file_type VARCHAR(100),
         file_desc_fr VARCHAR(150),
+        file_desc_en VARCHAR(150),
+        is_present_image BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         INDEX idx_project_id (project_id)
@@ -158,6 +176,25 @@ async function createTables() {
     `);
     console.log("✓ Table 'user_invitations' créée/vérifiée");
 
+    // Table password_resets - Tokens de réinitialisation de mot de passe
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL COMMENT 'ID de l\'utilisateur',
+        email VARCHAR(100) NOT NULL COMMENT 'Email de l\'utilisateur',
+        token_hash VARCHAR(255) COMMENT 'Hash du token pour la sécurité',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
+        expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
+        reset_at TIMESTAMP NULL COMMENT 'Date de réinitialisation (NULL si pas utilisé)',
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_email (email),
+        INDEX idx_token_hash (token_hash),
+        INDEX idx_expires_at (expires_at),
+        INDEX idx_user_id (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log("✓ Table 'password_resets' créée/vérifiée");
+
     // Ajouter la colonne file_desc_fr si elle n'existe pas (migration)
     try {
       const [columns] = await connection.execute(
@@ -172,10 +209,30 @@ async function createTables() {
         await connection.execute(
           "ALTER TABLE project_files ADD COLUMN file_desc_fr VARCHAR(150) AFTER file_type"
         );
-        console.log("✓ Colonne 'file_desc' ajoutée à la table 'project_files'");
+        console.log("✓ Colonne 'file_desc_fr' ajoutée à la table 'project_files'");
       }
     } catch (err) {
-      console.warn("⚠️ Impossible de vérifier/ajouter la colonne file_desc:", err.message);
+      console.warn("⚠️ Impossible de vérifier/ajouter la colonne file_desc_fr:", err.message);
+    }
+
+    // Ajouter la colonne file_desc_en si elle n'existe pas
+    try {
+      const [columns] = await connection.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'project_files' 
+         AND COLUMN_NAME = 'file_desc_en'`
+      );
+      
+      if (columns.length === 0) {
+        // La colonne n'existe pas, on la crée
+        await connection.execute(
+          "ALTER TABLE project_files ADD COLUMN file_desc_en VARCHAR(150) AFTER file_desc_fr"
+        );
+        console.log("✓ Colonne 'file_desc_en' ajoutée à la table 'project_files'");
+      }
+    } catch (err) {
+      console.warn("⚠️ Impossible de vérifier/ajouter la colonne file_desc_en:", err.message);
     }
 
     // Ajouter la colonne is_present_image si elle n'existe pas (migration)

@@ -100,4 +100,57 @@ const sendInvitationEmail = async (email, token, frontendUrl) => {
   }
 };
 
-module.exports = { sendInvitationEmail, createMailTransporter };
+// Fonction pour envoyer l'email de réinitialisation de mot de passe
+const sendPasswordResetEmail = async (email, token, frontendUrl) => {
+  const transporter = createMailTransporter();
+
+  if (!transporter) {
+    console.warn("⚠️  Aucun service d'email configuré. Email non envoyé.");
+    console.log(`📧 L'utilisateur devrait recevoir ce lien:\n${frontendUrl}/reset-password?token=${token}`);
+    return false;
+  }
+
+  const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+  
+  const htmlContent = `
+    <h2>Réinitialisation de votre mot de passe</h2>
+    <p>Vous avez demandé une réinitialisation de mot de passe pour votre compte CASiBIO.</p>
+    <p>Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe:</p>
+    <a href="${resetUrl}" style="
+      display: inline-block;
+      padding: 12px 30px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      margin: 20px 0;
+    ">
+      Réinitialiser mon mot de passe
+    </a>
+    <p>Ou copiez ce lien dans votre navigateur:</p>
+    <p><code>${resetUrl}</code></p>
+    <p><strong>Attention:</strong> Ce lien expire dans 1 heure.</p>
+    <hr>
+    <p style="color: #999; font-size: 12px;">
+      Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email. Votre mot de passe ne sera pas modifié.
+    </p>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: email,
+      subject: 'CASiBIO - Réinitialisation de votre mot de passe',
+      html: htmlContent,
+      text: `Cliquez sur ce lien pour réinitialiser votre mot de passe:\n${resetUrl}\n\nCe lien expire dans 1 heure.`
+    });
+
+    console.log(`✅ Email de réinitialisation envoyé à ${email}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ Erreur lors de l'envoi de l'email de réinitialisation à ${email}:`, err.message);
+    return false;
+  }
+};
+
+module.exports = { sendInvitationEmail, sendPasswordResetEmail, createMailTransporter };
