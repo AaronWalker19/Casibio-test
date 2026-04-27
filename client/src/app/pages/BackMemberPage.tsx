@@ -9,19 +9,28 @@ interface User {
   username: string;
   email: string;
   role: string;
+  name?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+interface Invitation {
+  id?: number;
+  email: string;
+  invited_by?: number;
+  created_at?: string;
+  expires_at?: string;
+  status: 'pending' | 'activated';
 }
 
 export default function BackMemberPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [newUser, setNewUser] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [inviteEmail, setInviteEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
@@ -34,8 +43,9 @@ export default function BackMemberPage() {
         // Rediriger vers la page articles si pas admin
         navigate("/backoffice/articles");
       } else {
-        // Charger les utilisateurs seulement si admin
+        // Charger les utilisateurs et invitations seulement si admin
         fetchUsers();
+        fetchInvitations();
       }
     }
   }, [user, authLoading, navigate]);
@@ -71,67 +81,92 @@ export default function BackMemberPage() {
     }
   };
 
-  const _handleAddUser = async (e: React.FormEvent) => {
+  const fetchInvitations = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        return;
+      }
+      const response = await fetch("/api/auth/invitations", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Erreur lors de la récupération des invitations");
+      }
+      const data = await response.json();
+      const formattedInvitations: Invitation[] = data.map((inv: any) => ({
+        id: inv.id,
+        email: inv.email,
+        invited_by: inv.invited_by,
+        created_at: inv.created_at,
+        expires_at: inv.expires_at,
+        status: 'pending'
+      }));
+      setInvitations(formattedInvitations);
+    } catch (err) {
+      console.error("Error fetching invitations:", err);
+    }
+  };
+
+  const handleInviteMember = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!newUser.username || !newUser.email || !newUser.password) {
-      setError("Tous les champs sont requis");
+    if (!inviteEmail) {
+      setError("L'email est requis");
       return;
     }
     
-    if (newUser.username.length < 3) {
-      setError("Le nom d'utilisateur doit faire au moins 3 caractères");
-      return;
-    }
-    
-    if (newUser.password.length < 8) {
-      setError("Le mot de passe doit faire au moins 8 caractères");
-      return;
-    }
-
     // Valider l'email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newUser.email)) {
+    if (!emailRegex.test(inviteEmail)) {
       setError("Email invalide");
       return;
     }
 
     try {
       setLoading(true);
-      const response = await fetch("/api/auth/register", {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        return;
+      }
+
+      const response = await fetch("/api/auth/invite", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          username: newUser.username,
-          email: newUser.email,
-          password: newUser.password,
+          email: inviteEmail,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.error || errorData.errors?.[0]?.msg || "Erreur lors de l'ajout de l'utilisateur";
+        const errorMessage = errorData.error || errorData.errors?.[0]?.msg || "Erreur lors de l'envoi de l'invitation";
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      console.log("Utilisateur créé:", data);
+      console.log("Invitation envoyée:", data);
       
-      setNewUser({ username: "", email: "", password: "" });
-      setSuccessMessage(`✓ Utilisateur ${data.user.username} créé avec succès en tant que Membre`);
+      setInviteEmail("");
+      setSuccessMessage(`✓ Invitation envoyée à ${data.email}. Le lien d'activation expire dans 48 heures.`);
       setError("");
       
-      // Masquer le message de succès après 3 secondes
-      setTimeout(() => setSuccessMessage(""), 3000);
+      // Masquer le message de succès après 4 secondes
+      setTimeout(() => setSuccessMessage(""), 4000);
       
-      // Rafraîchir la liste des utilisateurs
+      // Rafraîchir la liste des utilisateurs et invitations
       await fetchUsers();
+      await fetchInvitations();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'ajout");
-      console.error("Error adding user:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors de l'envoi de l'invitation");
+      console.error("Error inviting member:", err);
     } finally {
       setLoading(false);
     }
@@ -157,9 +192,39 @@ export default function BackMemberPage() {
 
       await fetchUsers();
       setError("");
+      setSuccessMessage("✓ Utilisateur supprimé avec succès");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de la suppression");
       console.error("Error deleting user:", err);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: number) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Vous n'êtes pas authentifié");
+        return;
+      }
+      const response = await fetch(`/api/auth/invitations/${invitationId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de l'annulation de l'invitation");
+      }
+
+      await fetchInvitations();
+      setError("");
+      setSuccessMessage("✓ Invitation annulée avec succès");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'annulation");
+      console.error("Error canceling invitation:", err);
     }
   };
 
@@ -185,6 +250,8 @@ export default function BackMemberPage() {
 
       await fetchUsers();
       setError("");
+      setSuccessMessage("✓ Rôle mis à jour avec succès");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour");
       console.error("Error updating role:", err);
@@ -195,13 +262,55 @@ export default function BackMemberPage() {
   const getFilteredUsers = () => {
     return users.filter((u) => {
       const matchesSearch = searchTerm === "" || 
-        u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase());
+        (u.username && u.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesFilter = filterRole === "" || u.role === filterRole;
       
       return matchesSearch && matchesFilter;
     });
+  };
+
+  // Fonction pour combiner utilisateurs et invitations pour l'affichage
+  const getCombinedMembers = () => {
+    const combinedList: any[] = [];
+    
+    // Ajouter les utilisateurs
+    getFilteredUsers().forEach((u) => {
+      combinedList.push({
+        type: 'user',
+        id: u.id,
+        name: u.name || '-',
+        email: u.email,
+        username: u.username || '-',
+        role: u.role,
+        status: 'active'
+      });
+    });
+    
+    // Ajouter les invitations (si aucun filtre de rôle ou recherche)
+    if (searchTerm === "" || invitations.some(inv => 
+      inv.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )) {
+      if (filterRole === "") {
+        invitations.forEach((inv) => {
+          combinedList.push({
+            type: 'invitation',
+            id: `inv-${inv.id}`,
+            name: '-',
+            email: inv.email,
+            username: '-',
+            role: '-',
+            status: 'pending',
+            invitationId: inv.id,
+            expiresAt: inv.expires_at
+          });
+        });
+      }
+    }
+    
+    return combinedList;
   };
 
   return (
@@ -230,35 +339,22 @@ export default function BackMemberPage() {
                 {successMessage}
               </div>
             )}
+
+            {/* Section d'invitation */}
             <div className="bg-white flex flex-col gap-[20px] p-[30px] relative rounded-[8px] shadow-lg w-full">
               <p className="font-['Inter:Regular',sans-serif] font-normal text-[24px] text-black w-full">
-                Ajouter un utilisateur
+                Inviter un nouveau membre
               </p>
-              <form onSubmit={_handleAddUser} className="flex gap-[15px] items-end w-full">
-                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
-                  <input
-                    type="text"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    placeholder="Nom d'utilisateur (min 3 caractères)"
-                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
-                  />
-                </div>
+              <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-gray-600 w-full">
+                Entrez l'email du nouveau membre. Il recevra un lien pour créer son compte avec mot de passe, nom et username.
+              </p>
+              <form onSubmit={handleInviteMember} className="flex gap-[15px] items-end w-full">
                 <div className="flex flex-col flex-1 gap-[5px] items-start relative">
                   <input
                     type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    placeholder="Email"
-                    className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
-                  />
-                </div>
-                <div className="flex flex-col flex-1 gap-[5px] items-start relative">
-                  <input
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    placeholder="Mot de passe (min 8 caractères)"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="Email du nouveau membre"
                     className="bg-white border-gray-200 border border-solid flex items-center p-[12px] relative rounded-[4px] shrink-0 w-full font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black placeholder:text-gray-300"
                   />
                 </div>
@@ -268,7 +364,7 @@ export default function BackMemberPage() {
                   className="bg-primary flex items-center justify-center px-[40px] py-[12px] rounded-[4px] disabled:opacity-50 cursor-pointer hover:bg-opacity-90 transition"
                 >
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
-                    {loading ? "Ajout en cours..." : "Ajouter"}
+                    {loading ? "Envoi en cours..." : "Inviter"}
                   </p>
                 </button>
               </form>
@@ -305,23 +401,27 @@ export default function BackMemberPage() {
             {showSearchInput && (
               <input
                 type="text"
-                placeholder="Rechercher par nom d'utilisateur ou email..."
+                placeholder="Rechercher par nom d'utilisateur, email ou nom complet..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full p-[10px] border border-gray-300 rounded-[4px] font-['Inter:Regular',sans-serif]"
               />
             )}
 
+            {/* Table des membres actifs */}
             <div className="bg-white flex flex-col rounded-[8px] shadow-lg w-full overflow-hidden">
-              <div className="grid grid-cols-[2fr_2fr_1fr_1fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
+              <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1.5fr] gap-[20px] bg-gray-50 p-[20px] border-b border-gray-200">
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
-                  Nom d'utilisateur
+                  Nom complet
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Email
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
-                  Rôle
+                  Username
+                </p>
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
+                  Rôle / Statut
                 </p>
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[20px] text-black">
                   Actions
@@ -330,47 +430,69 @@ export default function BackMemberPage() {
               {loading ? (
                 <div className="p-[20px] text-center">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                    Chargement des utilisateurs...
+                    Chargement des membres...
                   </p>
                 </div>
-              ) : getFilteredUsers().length === 0 ? (
+              ) : getCombinedMembers().length === 0 ? (
                 <div className="p-[20px] text-center">
                   <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-500">
-                    Aucun utilisateur trouvé
+                    Aucun membre trouvé
                   </p>
                 </div>
               ) : (
-                getFilteredUsers().map((u) => (
-                  <div key={u.id} className="grid grid-cols-[2fr_2fr_1fr_1fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
+                getCombinedMembers().map((member) => (
+                  <div key={member.id} className="grid grid-cols-[1fr_2fr_1fr_1fr_1.5fr] gap-[20px] p-[20px] border-b border-gray-200 last:border-b-0 items-center">
                     <div className="truncate">
                       <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black truncate">
-                        {u.username}
+                        {member.name}
                       </p>
                     </div>
                     <div className="truncate">
                       <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-black truncate">
-                        {u.email}
+                        {member.email}
+                      </p>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-gray-600 truncate">
+                        {member.username}
                       </p>
                     </div>
                     <div>
-                      <select 
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        className="p-[8px] border border-gray-300 rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px]"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="member">Membre</option>
-                      </select>
+                      {member.type === 'user' ? (
+                        <select 
+                          value={member.role}
+                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                          className="p-[8px] border border-gray-300 rounded-[4px] font-['Inter:Regular',sans-serif] text-[14px]"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="member">Membre</option>
+                        </select>
+                      ) : (
+                        <span className="bg-yellow-100 text-yellow-800 px-[12px] py-[6px] rounded-[4px] text-[14px] font-medium">
+                          En cours de validation
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-[10px]">
-                      <button
-                        onClick={() => handleDeleteUser(u.id)}
-                        className="bg-error flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-red-700 transition-colors"
-                      >
-                        <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
-                          Supprimer
-                        </p>
-                      </button>
+                      {member.type === 'user' ? (
+                        <button
+                          onClick={() => handleDeleteUser(member.id)}
+                          className="bg-error flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-red-700 transition-colors"
+                        >
+                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
+                            Supprimer
+                          </p>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelInvitation(member.invitationId)}
+                          className="bg-orange-500 flex items-center justify-center px-[15px] py-[8px] rounded-[4px] hover:bg-orange-600 transition-colors"
+                        >
+                          <p className="font-['Inter:Regular',sans-serif] font-normal text-[14px] text-white whitespace-nowrap">
+                            Annuler
+                          </p>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

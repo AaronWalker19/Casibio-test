@@ -50,13 +50,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5 md:gap-6">
             <div className="flex flex-col gap-2 sm:gap-2.5 md:gap-3">
               <label className="font-['Inter:Bold',sans-serif] font-bold text-sm sm:text-base md:text-lg text-primary">
-                Nom d'utilisateur
+                Nom d'utilisateur ou email
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="border border-primary rounded-sm p-2.5 sm:p-3 md:p-3.5 font-['Inter:Regular',sans-serif] text-sm sm:text-base md:text-base"
+                placeholder="Entrez votre username ou email"
                 required
               />
             </div>

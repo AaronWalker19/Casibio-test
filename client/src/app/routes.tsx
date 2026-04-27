@@ -8,6 +8,7 @@ import MemberArticlesPage from "./pages/MemberArticlesPage.tsx";
 import FormulairePage from "./pages/FormulairePage.tsx";
 import GalleriePage from "./pages/GalleriePage.tsx";
 import BackMemberPage from "./pages/BackMemberPage.tsx";
+import ActivateAccountPage from "./pages/ActivateAccountPage.tsx";
 import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
 
 export const router = createBrowserRouter([
@@ -50,6 +51,10 @@ export const router = createBrowserRouter([
   {
     path: "/backoffice/membres",
     Component: () => <ProtectedRoute><BackMemberPage /></ProtectedRoute>,
+  },
+  {
+    path: "/activate",
+    Component: ActivateAccountPage,
   },
   {
     path: "*",

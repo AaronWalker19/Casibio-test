@@ -31,7 +31,7 @@ export default function FormulairePage() {
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
   const [expandedContent, setExpandedContent] = useState<number | null>(null);
   const [editingFileId, setEditingFileId] = useState<number | null>(null);
-  const [editingFileData, setEditingFileData] = useState({ name: "", description: "" });
+  const [editingFileData, setEditingFileData] = useState({ name: "", description_fr: "", description_en: "" });
   const [formData, setFormData] = useState({
     titreFr: "",
     titreEn: "",
@@ -265,7 +265,8 @@ export default function FormulairePage() {
     setEditingFileId(file.id);
     setEditingFileData({
       name: file.file_display_name || "",
-      description: file.file_desc_fr || ""
+      description_fr: file.file_desc_fr || "",
+      description_en: file.file_desc_en || ""
     });
   };
 
@@ -276,8 +277,13 @@ export default function FormulairePage() {
       return;
     }
 
-    if (editingFileData.description.length > 150) {
-      setError("La description ne doit pas dépasser 150 caractères");
+    if (editingFileData.description_fr.length > 150) {
+      setError("La description FR ne doit pas dépasser 150 caractères");
+      return;
+    }
+
+    if (editingFileData.description_en.length > 150) {
+      setError("La description EN ne doit pas dépasser 150 caractères");
       return;
     }
 
@@ -297,7 +303,8 @@ export default function FormulairePage() {
         },
         body: JSON.stringify({
           new_name: editingFileData.name,
-          file_desc: editingFileData.description || null
+          file_desc_fr: editingFileData.description_fr || null,
+          file_desc_en: editingFileData.description_en || null
         })
       });
 
@@ -305,12 +312,12 @@ export default function FormulairePage() {
         // Mettre à jour le fichier dans la liste
         const updatedFiles = existingFiles.map((file) =>
           file.id === editingFileId
-            ? { ...file, file_display_name: editingFileData.name, file_desc: editingFileData.description }
+            ? { ...file, file_display_name: editingFileData.name, file_desc_fr: editingFileData.description_fr, file_desc_en: editingFileData.description_en }
             : file
         );
         setExistingFiles(updatedFiles);
         setEditingFileId(null);
-        setEditingFileData({ name: "", description: "" });
+        setEditingFileData({ name: "", description_fr: "", description_en: "" });
         setError("");
       } else {
         const errorData = await response.json();
@@ -734,18 +741,34 @@ export default function FormulairePage() {
                                   </div>
                                   <div className="flex-1">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                      Description (max 150 caractères)
+                                      Description FR (max 150 caractères)
                                     </label>
                                     <textarea
-                                      value={editingFileData.description}
-                                      onChange={(e) => setEditingFileData({ ...editingFileData, description: e.target.value.slice(0, 150) })}
+                                      value={editingFileData.description_fr}
+                                      onChange={(e) => setEditingFileData({ ...editingFileData, description_fr: e.target.value.slice(0, 150) })}
                                       maxLength={150}
                                       rows={3}
                                       className="w-full px-3 py-2 border border-gray-300 rounded text-sm resize-none"
-                                      placeholder="Description optionnelle (max 150 caractères)"
+                                      placeholder="Description en français (optionnelle)"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                      {editingFileData.description.length}/150 caractères
+                                      {editingFileData.description_fr.length}/150 caractères
+                                    </p>
+                                  </div>
+                                  <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Description EN (max 150 caractères)
+                                    </label>
+                                    <textarea
+                                      value={editingFileData.description_en}
+                                      onChange={(e) => setEditingFileData({ ...editingFileData, description_en: e.target.value.slice(0, 150) })}
+                                      maxLength={150}
+                                      rows={3}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm resize-none"
+                                      placeholder="Description in English (optional)"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {editingFileData.description_en.length}/150 caractères
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -760,7 +783,7 @@ export default function FormulairePage() {
                                       type="button"
                                       onClick={() => {
                                         setEditingFileId(null);
-                                        setEditingFileData({ name: "", description: "" });
+                                        setEditingFileData({ name: "", description_fr: "", description_en: "" });
                                       }}
                                       className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded text-sm font-medium transition-colors"
                                     >
@@ -785,8 +808,13 @@ export default function FormulairePage() {
                                       {file.file_type}
                                     </p>
                                     {file.file_desc_fr && (
-                                      <p className="text-xs text-gray-600 mt-1 truncate">
-                                        {file.file_desc}
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        <span className="font-semibold">FR:</span> {file.file_desc_fr}
+                                      </p>
+                                    )}
+                                    {file.file_desc_en && (
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        <span className="font-semibold">EN:</span> {file.file_desc_en}
                                       </p>
                                     )}
                                   </div>

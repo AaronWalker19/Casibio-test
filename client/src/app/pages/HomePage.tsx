@@ -46,7 +46,8 @@ interface GalleryImage {
   file_type: string;
   created_at: string;
   project_id?: number;
-  file_desc?: string;
+  file_desc_fr?: string;
+  file_desc_en?: string;
   is_present_image?: boolean;
 }
 

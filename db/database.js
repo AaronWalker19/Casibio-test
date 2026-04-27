@@ -53,10 +53,19 @@ async function createTables() {
         username VARCHAR(100) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
         role ENUM('admin', 'member') DEFAULT 'member',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+    // Ajouter la colonne name si elle n'existe pas (pour les bases existantes)
+    try {
+      await connection.execute(`ALTER TABLE users ADD COLUMN name VARCHAR(255)`);
+    } catch (err) {
+      // La colonne existe déjà, c'est normal
+      if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+    }
 
     // Table projects
     await connection.execute(`
@@ -131,6 +140,24 @@ async function createTables() {
     `);
     console.log("✓ Table 'user_participation' créée/vérifiée");
 
+    // Table user_invitations - Tokens d'invitation pour activation de compte
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_invitations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(100) NOT NULL COMMENT 'Email de la personne invitée',
+        token_hash VARCHAR(255) COMMENT 'Hash du token pour la BD',
+        invited_by INT COMMENT 'ID de l\'admin qui a envoyé l\'invitation',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'envoi de l\'invitation',
+        expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
+        activated_at TIMESTAMP NULL COMMENT 'Date d\'activation (NULL si pas encore activé)',
+        INDEX idx_email (email),
+        INDEX idx_token_hash (token_hash),
+        INDEX idx_expires_at (expires_at),
+        FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log("✓ Table 'user_invitations' créée/vérifiée");
+
     // Ajouter la colonne file_desc_fr si elle n'existe pas (migration)
     try {
       const [columns] = await connection.execute(
@@ -169,36 +196,6 @@ async function createTables() {
       }
     } catch (err) {
       console.warn("⚠️ Impossible de vérifier/ajouter la colonne is_present_image:", err.message);
-    }
-
-    // Vérifier que la table user_participation existe (migration post-déploiement)
-    try {
-      const [tables] = await connection.execute(
-        `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
-         WHERE TABLE_SCHEMA = DATABASE() 
-         AND TABLE_NAME = 'user_participation'`
-      );
-      
-      if (tables.length === 0) {
-        // La table n'existe pas, on la crée
-        console.log("⚠️ Table 'user_participation' introuvable, création...");
-        await connection.execute(`
-          CREATE TABLE IF NOT EXISTS user_participation (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            project_id INT NOT NULL,
-            user_id INT NOT NULL,
-            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            INDEX idx_project_id (project_id),
-            INDEX idx_user_id (user_id),
-            INDEX idx_added_at (added_at)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `);
-        console.log("✓ Table 'user_participation' créée");
-      }
-    } catch (err) {
-      console.warn("⚠️ Impossible de vérifier/créer la table user_participation:", err.message);
     }
 
     console.log("✓ Tables créées/vérifiées");

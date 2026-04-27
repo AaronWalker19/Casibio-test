@@ -12,7 +12,8 @@ interface GalleryFile {
   file_type: string;
   created_at: string;
   project_id?: number;
-  file_desc?: string;
+  file_desc_fr?: string;
+  file_desc_en?: string;
   is_present_image?: boolean;
 }
 
@@ -113,9 +114,9 @@ export function GalleryLightbox({ isOpen, files, initialIndex, onClose, currentA
           <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[18px] text-white">
             {currentFile.file_display_name}
           </p>
-          {currentFile.file_desc_fr && (
+          {(language === 'FR' ? currentFile.file_desc_fr : currentFile.file_desc_en) && (
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-[14px] text-white mt-[8px] opacity-90">
-              {currentFile.file_desc}
+              {language === 'FR' ? currentFile.file_desc_fr : currentFile.file_desc_en}
             </p>
           )}
           <div className="flex items-center gap-[10px] mt-[8px]">

@@ -314,7 +314,7 @@ router.post("/:projectId/upload",
 // GET ALL PROJECT FILES - GET /api/projects/files/all (DOIT VENIR AVANT /:projectId)
 router.get("/files/all", requireDB, async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, is_present_image, created_at, project_id FROM project_files ORDER BY created_at DESC");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, file_desc_en, is_present_image, created_at, project_id FROM project_files ORDER BY created_at DESC");
     const rows = await stmt.all();
     console.log("📁 Fichiers récupérés de la DB:", JSON.stringify(rows.slice(0, 3), null, 2));
     
@@ -405,7 +405,7 @@ router.get("/:projectId", requireDB, validateNumericId('projectId'), async (req,
 // GET FILES OF PROJECT - GET /api/projects/:projectId/files
 router.get("/:projectId/files", requireDB, validateNumericId('projectId'), async (req, res) => {
   try {
-    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, is_present_image, created_at, project_id FROM project_files WHERE project_id = ? ORDER BY created_at");
+    const stmt = db.prepare("SELECT id, file_name, file_display_name, file_type, file_path, file_desc_fr, file_desc_en, is_present_image, created_at, project_id FROM project_files WHERE project_id = ? ORDER BY created_at");
     const rows = await stmt.all(req.params.projectId);
     const filesWithUrls = rows.map(row => ({
       ...row,
@@ -576,7 +576,8 @@ router.put("/:projectId/file/:fileId/rename",
   validateNumericId('fileId'),
   [
     check('new_name').trim().isLength({ min: 1, max: 255 }).notEmpty(),
-    check('file_desc').optional().trim().isLength({ max: 150 })
+    check('file_desc_fr').optional().trim().isLength({ max: 150 }),
+    check('file_desc_en').optional().trim().isLength({ max: 150 })
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -584,17 +585,17 @@ router.put("/:projectId/file/:fileId/rename",
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { new_name, file_desc_fr } = req.body;
+    const { new_name, file_desc_fr, file_desc_en } = req.body;
 
     try {
-      const stmt = db.prepare("UPDATE project_files SET file_display_name = ?, file_desc_fr = ? WHERE id = ? AND project_id = ?");
-      const result = await stmt.run(new_name, file_desc_fr || null, req.params.fileId, req.params.projectId);
+      const stmt = db.prepare("UPDATE project_files SET file_display_name = ?, file_desc_fr = ?, file_desc_en = ? WHERE id = ? AND project_id = ?");
+      const result = await stmt.run(new_name, file_desc_fr || null, file_desc_en || null, req.params.fileId, req.params.projectId);
       
       if (result.changes === 0) {
         return res.status(404).json({ error: "Fichier non trouvé ou non autorisé" });
       }
       
-      console.log(`✓ Fichier ${req.params.fileId} modifié: nom="${new_name}", desc="${file_desc_fr || 'null'}"`);
+      console.log(`✓ Fichier ${req.params.fileId} modifié: nom="${new_name}", desc_fr="${file_desc_fr || 'null'}", desc_en="${file_desc_en || 'null'}`);
       
       // 📝 Enregistrer la participation de l'utilisateur (s'il n'est pas le créateur)
       await registerUserParticipation(req.params.projectId, req.user.userId);

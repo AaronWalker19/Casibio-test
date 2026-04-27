@@ -14,16 +14,40 @@ USE casibio;
 -- ============================================
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(100) UNIQUE NOT NULL COMMENT 'Nom d\'utilisateur unique',
+  username VARCHAR(100) UNIQUE COMMENT 'Nom d\'utilisateur unique',
   email VARCHAR(100) UNIQUE NOT NULL COMMENT 'Email unique',
-  password_hash VARCHAR(255) NOT NULL COMMENT 'Hash du mot de passe (bcryptjs)',
+  password_hash VARCHAR(255) COMMENT 'Hash du mot de passe (bcryptjs) - NULL avant activation',
+  name VARCHAR(255) COMMENT 'Nom complet de l\'utilisateur',
   role ENUM('admin', 'member') DEFAULT 'member' COMMENT 'Rôle: admin ou member',
+  is_active BOOLEAN DEFAULT FALSE COMMENT 'Compte activé ou non',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
+  activated_at TIMESTAMP NULL COMMENT 'Date d\'activation du compte',
   
   INDEX idx_username (username),
-  INDEX idx_email (email)
+  INDEX idx_email (email),
+  INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Table des utilisateurs du système';
+
+-- ============================================
+-- Table: user_invitations (Tokens d\'invitation)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_invitations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(100) NOT NULL COMMENT 'Email de la personne invitée',
+  token VARCHAR(255) UNIQUE NOT NULL COMMENT 'Token d\'activation unique',
+  token_hash VARCHAR(255) COMMENT 'Hash du token pour la BD',
+  invited_by INT COMMENT 'ID de l\'admin qui a envoyé l\'invitation',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'envoi de l\'invitation',
+  expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
+  activated_at TIMESTAMP NULL COMMENT 'Date d\'activation (NULL si pas encore activé)',
+  
+  INDEX idx_email (email),
+  INDEX idx_token_hash (token_hash),
+  INDEX idx_expires_at (expires_at),
+  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Table des invitations d\'activation de compte';
 
 -- ============================================
 -- Table: projects (Projets)
@@ -62,7 +86,8 @@ CREATE TABLE IF NOT EXISTS project_files (
   file_name VARCHAR(255) COMMENT 'Nom du fichier stocké',
   file_display_name VARCHAR(255) COMMENT 'Nom du fichier affichable',
   file_type VARCHAR(100) COMMENT 'Type MIME du fichier (image/png, application/pdf, etc)',
-  file_desc_fr VARCHAR(150) COMMENT 'Description du fichier (max 150 caractères)',
+  file_desc_fr VARCHAR(150) COMMENT 'Description du fichier en français (max 150 caractères)',
+  file_desc_en VARCHAR(150) COMMENT 'Description du fichier en anglais (max 150 caractères)',
   is_present_image BOOLEAN DEFAULT FALSE COMMENT 'Indique si c\'est l\'image de présentation du projet',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'upload',
   
