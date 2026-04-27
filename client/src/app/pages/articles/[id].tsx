@@ -295,9 +295,9 @@ export default function ArticlePage() {
     setShowDeleteConfirm(false);
 
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
-        alert("Vous n'êtes pas authentifié");
+        navigate("/");
         return;
       }
 

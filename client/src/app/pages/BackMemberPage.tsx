@@ -39,7 +39,10 @@ export default function BackMemberPage() {
   // Vérifier si l'utilisateur est admin au chargement
   useEffect(() => {
     if (!authLoading) {
-      if (!user || user.role !== "admin") {
+      if (!user) {
+        // Rediriger vers la page d'accueil si pas authentifié
+        navigate("/");
+      } else if (user.role !== "admin") {
         // Rediriger vers la page articles si pas admin
         navigate("/backoffice/articles");
       } else {
@@ -53,7 +56,7 @@ export default function BackMemberPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         setLoading(false);
@@ -83,7 +86,7 @@ export default function BackMemberPage() {
 
   const fetchInvitations = async () => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         return;
       }
@@ -128,7 +131,7 @@ export default function BackMemberPage() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;
@@ -174,7 +177,7 @@ export default function BackMemberPage() {
 
   const handleDeleteUser = async (id: number) => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;
@@ -202,7 +205,7 @@ export default function BackMemberPage() {
 
   const handleCancelInvitation = async (invitationId: number) => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;
@@ -230,7 +233,7 @@ export default function BackMemberPage() {
 
   const handleRoleChange = async (id: number, newRole: string) => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;

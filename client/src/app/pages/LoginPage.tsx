@@ -27,7 +27,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem("authToken", data.token);
+        sessionStorage.setItem("authToken", data.token);
         login(data);
         navigate("/backoffice/articles");
       } else {

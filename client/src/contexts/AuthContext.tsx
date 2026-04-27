@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,10 +10,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Générer un ID unique pour cette session du navigateur
+const getSessionId = (): string => {
+  let sessionId = sessionStorage.getItem('sessionId');
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('sessionId', sessionId);
+  }
+  return sessionId;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const sessionId = useRef(getSessionId());
 
   useEffect(() => {
     // Vérifier l'authentification au chargement
@@ -42,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setIsAuthenticated(true);
               setUser(data.user);
             } else {
-              localStorage.removeItem('authToken');
+              sessionStorage.removeItem('authToken');
               setIsAuthenticated(false);
             }
           } else if (data.user) {
@@ -53,12 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(false);
           }
         } else {
-          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
           setIsAuthenticated(false);
         }
       } catch (err) {
         console.error("Erreur vérification auth:", err);
-        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
@@ -68,11 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyAuth();
   }, []);
 
+
+
   const login = (data: any) => {
     // Mettre à jour l'état avec les données de l'authentification
     if (data.token) {
-      // Garder le token en localStorage comme fallback
-      localStorage.setItem('authToken', data.token);
+      // Utiliser sessionStorage au lieu de localStorage
+      // Chaque onglet/fenêtre aura sa propre session
+      sessionStorage.setItem('authToken', data.token);
+      sessionStorage.setItem('sessionId', sessionId.current);
       setIsAuthenticated(true);
       setUser(data.user);
     }
@@ -88,7 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("Erreur logout:", err);
     } finally {
-      localStorage.removeItem('authToken');
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('sessionId');
       setIsAuthenticated(false);
       setUser(null);
     }

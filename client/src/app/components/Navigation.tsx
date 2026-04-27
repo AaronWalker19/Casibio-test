@@ -48,7 +48,7 @@ function _MenuHamburger({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
 export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -78,6 +78,7 @@ export function Navigation() {
             onClick={handleLogout}
             className="content-stretch flex gap-1 sm:gap-1.5 h-8 sm:h-9 items-center justify-center p-1 relative rounded-sm shrink-0 px-2 sm:px-3 bg-primary-dark hover:bg-primary-darker transition"
             data-name="backoffice-btn"
+            title={user?.name ? `Connecté en tant que ${user.name}` : "Déconnexion"}
           >
             <div className="relative shrink-0 w-4 sm:w-5 h-4 sm:h-5" data-name="settings">
               <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
@@ -85,10 +86,18 @@ export function Navigation() {
                 <path d="M12 14c-2.67 0-8 1.34-8 4v6h16v-6c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
-            <p className="hidden sm:block font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-sm sm:text-base text-white whitespace-nowrap">
-              {t(language, "deconnexion")}
-            </p>
+            <div className="flex flex-col items-start gap-0.5">
+              <p className="hidden sm:block font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-sm sm:text-base text-white whitespace-nowrap">
+                {t(language, "deconnexion")}
+              </p>
+              
+            </div>
           </button>
+          {user?.name && user.name.trim() && (
+                <p className="block font-['Inter:Regular',sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-xs text-gray-200 whitespace-nowrap max-w-xs truncate">
+                  {user.name}
+                </p>
+              )}
         </div>
 
         {/* Boutons de langue */}

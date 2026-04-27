@@ -36,7 +36,7 @@ interface Article {
 
 export default function MemberArticlesPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,14 +47,23 @@ export default function MemberArticlesPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [articleImages, setArticleImages] = useState<{ [key: number]: string }>({});
 
+  // Vérifier si l'utilisateur est authentifié et rediriger vers l'accueil sinon
   useEffect(() => {
-    fetchArticles();
-  }, []);
+    if (!authLoading && !user) {
+      navigate("/");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchArticles();
+    }
+  }, [user]);
 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         setLoading(false);
@@ -128,7 +137,7 @@ export default function MemberArticlesPage() {
 
   const handleDeleteArticle = async (id: number, title: string) => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sessionStorage.getItem("authToken");
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;

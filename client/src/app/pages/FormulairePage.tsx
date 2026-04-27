@@ -38,6 +38,13 @@ export default function FormulairePage() {
     contents: [] as ContentBlock[],
   });
 
+  // Vérifier si l'utilisateur est authentifié et rediriger vers l'accueil sinon
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, loading, navigate]);
+
   // Vérifier si on est en mode édition et pré-remplir les données
   useEffect(() => {
     const state = location.state as any;
@@ -61,7 +68,7 @@ export default function FormulairePage() {
       // Récupérer les fichiers liés à l'article
       const fetchArticleFiles = async () => {
         try {
-          const token = localStorage.getItem('authToken');
+          const token = sessionStorage.getItem('authToken');
           if (!token) return;
 
           const response = await fetch(`/api/projects/${article.id}/files`, {
@@ -212,7 +219,7 @@ export default function FormulairePage() {
   // Marquer/démarquer une image existante comme image de présentation
   const togglePresentImageExisting = async (fileName: string, fileId: number) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;
@@ -288,7 +295,7 @@ export default function FormulairePage() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (!token) {
         setError("Vous n'êtes pas authentifié");
         return;
@@ -384,7 +391,7 @@ export default function FormulairePage() {
 
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       
       if (!token) {
         setError("Token d'authentification manquant. Reconnectez-vous SVP.");

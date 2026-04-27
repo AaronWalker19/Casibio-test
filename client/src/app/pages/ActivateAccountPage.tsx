@@ -134,7 +134,7 @@ export default function ActivateAccountPage() {
       console.log("Account activated:", data);
 
       // Sauvegarder le token et rediriger
-      localStorage.setItem("authToken", data.token);
+      sessionStorage.setItem("authToken", data.token);
       setSuccess(true);
 
       // Attendre 2 secondes puis rediriger

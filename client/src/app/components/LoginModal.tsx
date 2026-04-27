@@ -33,7 +33,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem("authToken", data.token);
+        sessionStorage.setItem("authToken", data.token);
         login(data);
         setUsername("");
         setPassword("");

@@ -94,7 +94,7 @@ router.post("/register",
       res.json({
         message: "Utilisateur créé",
         token: tokenJwt,
-        user: { id: newUserId, username, email, role: userRole }
+        user: { id: newUserId, username, email, role: userRole, name: null }
       });
     } catch (err) {
       if (err.message && err.message.includes("UNIQUE")) {
@@ -150,18 +150,18 @@ router.post("/login",
       // Générer le token
       const token = generateToken(user.id, user.username, user.role);
       
-      // Définir le cookie httpOnly et secure
+      // Définir le cookie httpOnly et secure (session cookie - expire à la fermeture du navigateur)
       res.cookie('authToken', token, {
         httpOnly: true,           // ✅ Pas accessible en JS (protection XSS)
         secure: process.env.NODE_ENV === 'production', // HTTPS seulement en production
-        sameSite: 'strict',       // Protection CSRF
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 jours
+        sameSite: 'strict'        // Protection CSRF
+        // Pas de maxAge = session cookie (expire à la fermeture du navigateur)
       });
       
       res.json({
         message: "Connexion réussie",
         token,
-        user: { id: user.id, username: user.username, email: user.email, role: user.role }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, name: user.name }
       });
     } catch (err) {
       console.error("❌ Login error:", {
@@ -189,7 +189,7 @@ router.post("/login",
 );
 
 // VERIFY TOKEN - GET /api/auth/verify
-router.get("/verify", (req, res) => {
+router.get("/verify", async (req, res) => {
   const jwt = require("jsonwebtoken");
   const SECRET_KEY = process.env.JWT_SECRET;
   
@@ -203,11 +203,24 @@ router.get("/verify", (req, res) => {
     return res.json({ valid: false });
   }
 
-  jwt.verify(token, SECRET_KEY, (err, user) => {
+  jwt.verify(token, SECRET_KEY, async (err, user) => {
     if (err) {
       return res.json({ valid: false });
     }
-    res.json({ valid: true, user });
+    
+    try {
+      // Chercher l'utilisateur dans la base de données pour obtenir tous ses détails (incluant le nom)
+      const fullUser = await db.prepare("SELECT id, username, email, name, role FROM users WHERE id = ?").get(user.userId);
+      
+      if (!fullUser) {
+        return res.json({ valid: false });
+      }
+      
+      res.json({ valid: true, user: fullUser });
+    } catch (err) {
+      console.error("Error fetching user in verify:", err);
+      res.json({ valid: false });
+    }
   });
 });
 
@@ -222,8 +235,20 @@ router.post("/logout", (req, res) => {
 });
 
 // GET CURRENT USER - GET /api/auth/me
-router.get("/me", authenticateToken, (req, res) => {
-  res.json({ user: req.user });
+router.get("/me", authenticateToken, async (req, res) => {
+  try {
+    // Chercher l'utilisateur dans la base de données pour obtenir ses détails complets
+    const user = await db.prepare("SELECT id, username, email, name, role FROM users WHERE id = ?").get(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+    
+    res.json({ user });
+  } catch (err) {
+    console.error("Error fetching current user:", err);
+    res.status(500).json({ error: "Erreur lors de la récupération de l'utilisateur" });
+  }
 });
 
 // GET ALL USERS - GET /api/auth/users (admin only)

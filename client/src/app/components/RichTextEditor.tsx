@@ -56,7 +56,7 @@ export default function RichTextEditor({
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const token = localStorage.getItem("authToken");
+        const token = sessionStorage.getItem("authToken");
         const response = await fetch("/api/projects", {
           headers: {
             Authorization: `Bearer ${token}`,
