@@ -46,10 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           
-          // /verify renvoie { valid, user }, /me renvoie { user }
+          // /verify renvoie { valid, user, token }, /me renvoie { user }
           if (data.valid !== undefined) {
             // Route /verify
             if (data.valid) {
+              // Remettre le token en sessionStorage après vérification
+              if (data.token) {
+                sessionStorage.setItem('authToken', data.token);
+              }
               setIsAuthenticated(true);
               setUser(data.user);
             } else {
@@ -79,7 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyAuth();
   }, []);
 
+  // Déconnexion automatique à la fermeture de la page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Appeler logout quand on ferme/quitte la page
+      logout();
+    };
 
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const login = (data: any) => {
     // Mettre à jour l'état avec les données de l'authentification

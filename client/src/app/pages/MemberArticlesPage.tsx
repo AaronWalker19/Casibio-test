@@ -36,7 +36,7 @@ interface Article {
 
 export default function MemberArticlesPage() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { language } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,35 +49,30 @@ export default function MemberArticlesPage() {
 
   // Vérifier si l'utilisateur est authentifié et rediriger vers l'accueil sinon
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !isAuthenticated) {
       navigate("/");
     }
-  }, [user, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated && !authLoading) {
       fetchArticles();
     }
-  }, [user]);
+  }, [isAuthenticated, authLoading]);
 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const token = sessionStorage.getItem("authToken");
-      if (!token) {
-        setError("Vous n'êtes pas authentifié");
-        setLoading(false);
-        return;
-      }
-
+      // Utiliser credentials: 'include' pour envoyer le cookie automatiquement
       const response = await fetch("/api/projects", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
         credentials: 'include',
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setError("Vous n'êtes pas authentifié");
+          return;
+        }
         throw new Error("Erreur lors du chargement des articles");
       }
 
@@ -91,9 +86,6 @@ export default function MemberArticlesPage() {
       for (const article of data) {
         try {
           const filesResponse = await fetch(`/api/projects/${article.id}/files`, {
-            headers: {
-              "Authorization": `Bearer ${token}`,
-            },
             credentials: 'include',
           });
           if (filesResponse.ok) {
@@ -137,21 +129,16 @@ export default function MemberArticlesPage() {
 
   const handleDeleteArticle = async (id: number, title: string) => {
     try {
-      const token = sessionStorage.getItem("authToken");
-      if (!token) {
-        setError("Vous n'êtes pas authentifié");
-        return;
-      }
-
       const response = await fetch(`/api/projects/${id}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
         credentials: 'include',
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setError("Vous n'êtes pas authentifié");
+          return;
+        }
         throw new Error("Erreur lors de la suppression");
       }
 

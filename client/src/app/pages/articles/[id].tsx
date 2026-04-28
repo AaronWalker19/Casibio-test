@@ -369,6 +369,15 @@ export default function ArticlePage() {
           .filter((section) => section.content) // Filtrer les sections vides
       : [];
 
+  // Vérifier s'il y a des sections avec titre pour l'affichage du sommaire
+  const hasValidSections = sections.some((section) => section.title && section.title.trim());
+
+  // Vérifier s'il y a une image liée à l'article
+  const articleImages = projectFiles.filter((f) =>
+    f.file_type?.toLowerCase().startsWith("image/"),
+  );
+  const hasArticleImage = articleImages.length > 0;
+
   return (
     <div className="bg-white content-stretch flex flex-col items-center relative size-full">
       <Navigation />
@@ -424,47 +433,52 @@ export default function ArticlePage() {
       </div>
 
       {/* Image et infos */}
-      <div className="bg-white content-stretch flex flex-col items-center gap-4 sm:gap-5 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 w-full border-b border-gray-50">
-        <div className="h-40 sm:h-56 md:h-64 lg:h-80 w-full rounded-sm overflow-hidden">
-          <ImageWithFallback
-            src={(() => {
-              // Filtrer les images
-              const images = projectFiles.filter((f) =>
-                f.file_type?.toLowerCase().startsWith("image/"),
-              );
+      {hasArticleImage ? (
+        <div className="bg-white content-stretch flex flex-col items-center gap-4 sm:gap-5 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 w-full border-b border-gray-50">
+          <div className="h-40 sm:h-56 md:h-64 lg:h-80 w-full rounded-sm overflow-hidden">
+            <ImageWithFallback
+              src={(() => {
+                // D'abord chercher l'image avec is_present_image = true
+                const presentImage = articleImages.find((img) => img.is_present_image);
+                if (presentImage) {
+                  return presentImage.file_path;
+                }
 
-              if (images.length === 0) {
-                return "https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=300&fit=crop";
-              }
-
-              // D'abord chercher l'image avec is_present_image = true
-              const presentImage = images.find((img) => img.is_present_image);
-              if (presentImage) {
-                return presentImage.file_path;
-              }
-
-              // Sinon, trier par date décroissante et prendre la plus récente
-              const sortedImages = images.sort(
-                (a, b) =>
-                  parseDate(b.created_at).getTime() -
-                  parseDate(a.created_at).getTime(),
-              );
-              return sortedImages[0].file_path;
-            })()}
-            alt={article.title_fr}
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="flex gap-3 sm:gap-4 md:gap-5 items-start w-full">
-          <div className="flex gap-2 sm:gap-2.5 items-center">
-            <div className="bg-error content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm">
-              <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
-                {formatDate(article.created_at, language)}
-              </p>
+                // Sinon, trier par date décroissante et prendre la plus récente
+                const sortedImages = articleImages.sort(
+                  (a, b) =>
+                    parseDate(b.created_at).getTime() -
+                    parseDate(a.created_at).getTime(),
+                );
+                return sortedImages[0].file_path;
+              })()}
+              alt={article.title_fr}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex gap-3 sm:gap-4 md:gap-5 items-start w-full">
+            <div className="flex gap-2 sm:gap-2.5 items-center">
+              <div className="bg-error content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
+                  {formatDate(article.created_at, language)}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white content-stretch flex flex-col items-center gap-4 sm:gap-5 md:gap-6 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 md:py-12 w-full border-b border-gray-50">
+          <div className="flex gap-3 sm:gap-4 md:gap-5 items-start w-full">
+            <div className="flex gap-2 sm:gap-2.5 items-center">
+              <div className="bg-error content-stretch flex items-center justify-center p-2 sm:p-2.5 rounded-sm">
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-xs sm:text-sm text-white whitespace-nowrap">
+                  {formatDate(article.created_at, language)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Contenu */}
       <div className="relative w-full">
@@ -542,8 +556,8 @@ export default function ArticlePage() {
                     </div>
                   </>
                 )}
-                {/* Sommaire - Afficher seulement si sections ne sont pas vides */}
-                {sections.length > 0 && (
+                {/* Sommaire - Afficher seulement si sections ont des titres */}
+                {hasValidSections && (
                   <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full ">
                     <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                       {t(language, "sommaire")}
@@ -570,8 +584,10 @@ export default function ArticlePage() {
                   </div>
                 )}
 
-                {/* Galerie d'images - Afficher seulement si sections ne sont pas vides */}
-                {sections.length > 0 && (
+                {/* Galerie d'images - Afficher seulement s'il y a des images */}
+                {projectFiles.filter((f) =>
+                  f.file_type?.toLowerCase().startsWith("image/"),
+                ).length > 0 && (
                   <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
                     <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                       {t(language, "galerie")}
@@ -644,7 +660,7 @@ export default function ArticlePage() {
                 )}
 
                 {/* Participants - Bloc compact dans le sidebar */}
-                {participantsData && (
+                {participantsData && participantsData.participants.length > 0 && (
                   <div className="bg-gray-50 content-stretch flex flex-col gap-2.5 sm:gap-3 md:gap-4 items-start p-4 sm:p-5 md:p-6 rounded-sm w-full">
                     <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
                       {t(language, "participants")}

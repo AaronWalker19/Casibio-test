@@ -68,15 +68,9 @@ export default function FormulairePage() {
       // Récupérer les fichiers liés à l'article
       const fetchArticleFiles = async () => {
         try {
-          const token = sessionStorage.getItem('authToken');
-          if (!token) return;
-
           const response = await fetch(`/api/projects/${article.id}/files`, {
             method: 'GET',
-            credentials: 'include',
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
+            credentials: 'include'
           });
 
           if (response.ok) {
@@ -219,12 +213,6 @@ export default function FormulairePage() {
   // Marquer/démarquer une image existante comme image de présentation
   const togglePresentImageExisting = async (fileName: string, fileId: number) => {
     try {
-      const token = sessionStorage.getItem('authToken');
-      if (!token) {
-        setError("Vous n'êtes pas authentifié");
-        return;
-      }
-
       const isCurrentlyPresent = presentImageFile === fileName;
       
       // Appel API pour mettre à jour la base de données
@@ -232,7 +220,6 @@ export default function FormulairePage() {
         method: 'PUT',
         credentials: 'include',
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -295,17 +282,10 @@ export default function FormulairePage() {
     }
 
     try {
-      const token = sessionStorage.getItem('authToken');
-      if (!token) {
-        setError("Vous n'êtes pas authentifié");
-        return;
-      }
-
       const response = await fetch(`/api/projects/${editingArticleId}/file/${editingFileId}/rename`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -391,14 +371,6 @@ export default function FormulairePage() {
 
     setFormLoading(true);
     try {
-      const token = sessionStorage.getItem('authToken');
-      
-      if (!token) {
-        setError("Token d'authentification manquant. Reconnectez-vous SVP.");
-        setFormLoading(false);
-        return;
-      }
-
       // Utiliser FormData pour gérer les fichiers
       const formDataToSend = new FormData();
       formDataToSend.append("title_fr", formData.titreFr);
@@ -430,11 +402,8 @@ export default function FormulairePage() {
       const response = await fetch(url, {
         method: method,
         credentials: 'include',
-        headers: {
-          "Authorization": `Bearer ${token}`
-          // Ne pas définir Content-Type pour FormData - le navegateur le fera automatiquement
-        },
-        body: formDataToSend,
+        body: formDataToSend
+        // Ne pas définir Content-Type pour FormData - le navegateur le fera automatiquement
       });
       
       let responseData;

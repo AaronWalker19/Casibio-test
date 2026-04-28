@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
 import { ArticleCard } from "../components/ArticleCard.tsx";
 import { GalleryCard } from "../components/GalleryCard.tsx";
 import { GalleryLightbox } from "../components/GalleryLightbox.tsx";
 import { useLanguage } from "../../contexts/LanguageContext.tsx";
+import { useAuth } from "../../contexts/AuthContext.tsx";
 import { t } from "../../contexts/translations.tsx";
 import svgPaths from "../../imports/Home/svg-1u6sm0pn16.ts";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
@@ -83,6 +84,8 @@ function Group1() {
 
 export default function HomePage() {
   const { language } = useLanguage();
+  const { isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [errorArticles, setErrorArticles] = useState<string | null>(null);
@@ -94,6 +97,13 @@ export default function HomePage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [articleImages, setArticleImages] = useState<{ [key: number]: string }>({});
+
+  // Rediriger les utilisateurs connectés vers la page articles membres
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/membres/articles', { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
 
   useEffect(() => {
     const fetchArticles = async () => {

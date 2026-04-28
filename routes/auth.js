@@ -216,7 +216,8 @@ router.get("/verify", async (req, res) => {
         return res.json({ valid: false });
       }
       
-      res.json({ valid: true, user: fullUser });
+      // Retourner aussi le token pour que le client puisse le remettre en sessionStorage après un refresh
+      res.json({ valid: true, user: fullUser, token });
     } catch (err) {
       console.error("Error fetching user in verify:", err);
       res.json({ valid: false });
