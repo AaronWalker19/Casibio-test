@@ -739,13 +739,13 @@ export default function ArticlePage() {
                   key={file.id}
                   href={file.file_path}
                   download
-                  className="bg-gray-50 content-stretch flex gap-3 sm:gap-4 md:gap-5 items-center p-4 sm:p-5 md:p-6 relative rounded-sm shrink-0 hover:bg-gray-300 transition-colors"
+                  className="bg-gray-50 content-stretch flex gap-3 sm:gap-4 md:gap-5 items-center p-4 sm:p-5 md:p-6 relative rounded-sm hover:bg-gray-300 transition-colors flex-1"
                 >
-                  <div className="flex flex-col gap-1 sm:gap-1.5">
-                    <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-black">
+                  <div className="flex flex-col gap-1 sm:gap-1.5 min-w-0 flex-1">
+                    <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative text-xs sm:text-sm md:text-base text-black truncate">
                       {file.file_display_name}
                     </p>
-                    <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs text-gray-600">
+                    <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative text-xs text-gray-600">
                       date: {formatDate(file.created_at, language)}
                     </p>
                   </div>

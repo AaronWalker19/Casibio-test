@@ -5,6 +5,9 @@ const path = require("path");
 const fs = require("fs");
 const { check, validationResult } = require("express-validator");
 const sanitizeHtml = require("sanitize-html");
+const archiver = require("archiver");
+const PDFDocument = require("pdfkit");
+const stripHtml = require("strip-html");
 let db;
 
 // ✅ Helper: Sanitize HTML content from React Quill
@@ -916,6 +919,278 @@ router.delete("/:projectId",
     } catch (err) {
       console.error("Delete project error:", err);
       return res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
+  }
+);
+
+// EXPORT ALL PROJECTS - GET /api/projects/export/all
+router.get("/export/all", 
+  requireDB, 
+  authenticateToken,
+  async (req, res) => {
+    try {
+      console.log(`📦 Début de l'export de tous les articles pour l'utilisateur ${req.user.userId}`);
+
+      // Créer un stream ZIP
+      const archive = archiver("zip", {
+        zlib: { level: 9 } // Compression maximale
+      });
+
+      // Gérer les erreurs de stream
+      archive.on("error", (err) => {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Erreur lors de la création du ZIP" });
+      });
+
+      // Définir les headers pour le téléchargement
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", 'attachment; filename="export_articles.zip"');
+
+      // Pipe l'archive vers la réponse
+      archive.pipe(res);
+
+      // Récupérer tous les projets
+      const projectsStmt = db.prepare(`
+        SELECT id, title_fr, title_en, created_by, created_at
+        FROM projects
+        ORDER BY created_at DESC
+      `);
+      const projects = await projectsStmt.all();
+
+      if (!projects || projects.length === 0) {
+        console.log("⚠️ Aucun projet à exporter");
+        archive.append("Aucun projet trouvé", { name: "README.txt" });
+        archive.finalize();
+        return;
+      }
+
+      console.log(`📋 ${projects.length} projets à exporter`);
+
+      // Traiter chaque projet
+      for (const project of projects) {
+        // Créer un dossier pour le projet (utiliser le titre en français)
+        const projectFolder = project.title_fr
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "_")
+          .substring(0, 100) || `projet_${project.id}`;
+
+        console.log(`📁 Traitement du projet: ${projectFolder}`);
+
+        // Récupérer les contenus du projet
+        const contentsStmt = db.prepare(`
+          SELECT id, title_fr, title_en, content_fr, content_en, position
+          FROM project_contents
+          WHERE project_id = ?
+          ORDER BY position ASC
+        `);
+        const contents = await contentsStmt.all(project.id);
+        
+        console.log(`  📄 Contenus trouvés pour ${projectFolder}: ${contents ? contents.length : 0}`);
+        if (contents && contents.length > 0) {
+          console.log(`    Premier contenu:`, JSON.stringify(contents[0]).substring(0, 100));
+        }
+
+        // Créer le contenu du PDF/Texte
+        let textContent = `ARTICLE: ${project.title_fr}\n`;
+        textContent += `═════════════════════════════════════════\n\n`;
+        textContent += `TITRE ANGLAIS: ${project.title_en}\n`;
+        textContent += `DATE: ${new Date(project.created_at).toLocaleDateString("fr-FR")}\n\n`;
+        textContent += `─────────────────────────────────────────\n`;
+        textContent += `CONTENU\n`;
+        textContent += `─────────────────────────────────────────\n\n`;
+
+        // Ajouter les contenus
+        if (contents && contents.length > 0) {
+          let contentAdded = false;
+          
+          for (const content of contents) {
+            // Vérifier que le titre n'est pas null/undefined
+            const titleFr = content.title_fr || "(Sans titre)";
+            const titleEn = content.title_en || "";
+            const contentFr = content.content_fr || "";
+            
+            // Ne pas ajouter de section vide
+            if (!titleFr && !contentFr) {
+              console.log(`    ⚠️ Contenu vide ignoré (pas de titre ni de contenu)`);
+              continue;
+            }
+            
+            textContent += `## ${titleFr}\n`;
+            if (titleEn) {
+              textContent += `(EN: ${titleEn})\n`;
+            }
+            textContent += `\n`;
+            
+            if (contentFr) {
+              try {
+                const stripped = stripHtml(contentFr);
+                const plainText = (stripped.result || stripped || contentFr).trim();
+                if (plainText) {
+                  textContent += `${plainText}\n\n`;
+                  contentAdded = true;
+                } else {
+                  console.log(`    ⚠️ Contenu vide après stripHtml`);
+                  textContent += `(Contenu non disponible)\n\n`;
+                }
+              } catch (stripErr) {
+                console.warn("    ⚠️ Erreur stripHtml:", stripErr);
+                textContent += `${contentFr}\n\n`;
+                contentAdded = true;
+              }
+            } else {
+              textContent += `(Pas de contenu)\n\n`;
+            }
+            textContent += `\n`;
+          }
+          
+          if (!contentAdded) {
+            console.log(`    ⚠️ Aucun contenu valide trouvé pour cet article`);
+          }
+        } else {
+          console.log(`    ⚠️ Aucun contenu trouvé dans project_contents pour project_id=${project.id}`);
+          textContent += `(Aucun contenu disponible)\n`;
+        }
+
+        // Créer un PDF avec le contenu
+        try {
+          const pdfBuffer = await new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 50, size: "A4" });
+            const chunks = [];
+
+            doc.on("data", chunk => chunks.push(chunk));
+            doc.on("end", () => resolve(Buffer.concat(chunks)));
+            doc.on("error", reject);
+
+            // Ajouter le contenu au PDF
+            doc.fontSize(16).font("Helvetica-Bold").text(project.title_fr);
+            doc.fontSize(11).font("Helvetica").text(`Titre anglais: ${project.title_en}`, { underline: false });
+            doc.text(`Date: ${new Date(project.created_at).toLocaleDateString("fr-FR")}`);
+            doc.moveDown();
+
+            if (contents && contents.length > 0) {
+              for (const content of contents) {
+                // Vérifier que le titre n'est pas null/undefined
+                const titleFr = content.title_fr || "(Sans titre)";
+                const titleEn = content.title_en || "";
+                const contentFr = content.content_fr || "";
+                
+                // Ne pas ajouter de section vide
+                if (!titleFr && !contentFr) continue;
+                
+                doc.fontSize(13).font("Helvetica-Bold").text(titleFr);
+                if (titleEn) {
+                  doc.fontSize(10).font("Helvetica").text(`(EN: ${titleEn})`);
+                }
+                doc.fontSize(10).font("Helvetica");
+                
+                if (contentFr) {
+                  try {
+                    const stripped = stripHtml(contentFr);
+                    const plainText = (stripped.result || stripped || contentFr).trim().substring(0, 5000);
+                    if (plainText) {
+                      doc.text(plainText);
+                    } else {
+                      doc.text("(Contenu non disponible)");
+                    }
+                  } catch (stripErr) {
+                    console.warn("    ⚠️ Erreur stripHtml PDF:", stripErr);
+                    doc.text(contentFr.substring(0, 5000));
+                  }
+                } else {
+                  doc.text("(Pas de contenu)");
+                }
+                
+                doc.moveDown();
+              }
+            }
+
+            doc.end();
+          });
+
+          // Ajouter le PDF au ZIP
+          archive.append(pdfBuffer, {
+            name: `${projectFolder}/contenu.pdf`
+          });
+        } catch (pdfErr) {
+          console.warn(`⚠️ Erreur lors de la création du PDF pour ${projectFolder}:`, pdfErr);
+          // Continuer sans le PDF
+        }
+
+        // Ajouter aussi un fichier texte
+        archive.append(textContent, {
+          name: `${projectFolder}/contenu.txt`,
+          date: new Date(project.created_at)
+        });
+
+        // Récupérer et ajouter les fichiers du projet
+        const filesStmt = db.prepare(`
+          SELECT id, file_path, file_name, file_display_name
+          FROM project_files
+          WHERE project_id = ?
+          ORDER BY created_at ASC
+        `);
+        const files = await filesStmt.all(project.id);
+
+        if (files && files.length > 0) {
+          console.log(`📄 ${files.length} fichiers à ajouter pour ${projectFolder}`);
+
+          for (const file of files) {
+            if (!file.file_path) continue;
+
+            // Valider le chemin de fichier
+            if (!validateFilePath(file.file_path, uploadsDir)) {
+              console.warn(`⚠️ Fichier suspecté: ${file.file_path}`);
+              continue;
+            }
+
+            const fullFilePath = path.join(uploadsDir, file.file_path);
+
+            if (fs.existsSync(fullFilePath)) {
+              try {
+                const fileData = fs.readFileSync(fullFilePath);
+                archive.append(fileData, {
+                  name: `${projectFolder}/${file.file_display_name || file.file_name}`,
+                  date: new Date()
+                });
+                console.log(`  ✓ Fichier ajouté: ${file.file_name}`);
+              } catch (fileErr) {
+                console.warn(`⚠️ Erreur lors de la lecture du fichier ${fullFilePath}:`, fileErr);
+              }
+            } else {
+              console.warn(`⚠️ Fichier non trouvé: ${fullFilePath}`);
+            }
+          }
+        }
+      }
+
+      // Créer un fichier INDEX.txt pour lister tous les articles
+      let indexContent = `EXPORT DES ARTICLES\n`;
+      indexContent += `═══════════════════════════════════════════\n`;
+      indexContent += `Date d'export: ${new Date().toLocaleString("fr-FR")}\n`;
+      indexContent += `Nombre d'articles: ${projects.length}\n\n`;
+      indexContent += `LISTE DES ARTICLES:\n`;
+      indexContent += `───────────────────────────────────────────\n\n`;
+
+      for (const project of projects) {
+        const projectFolder = project.title_fr
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "_")
+          .substring(0, 100) || `projet_${project.id}`;
+        indexContent += `• ${project.title_fr}\n  Dossier: ${projectFolder}/\n\n`;
+      }
+
+      archive.append(indexContent, {
+        name: "INDEX.txt",
+        date: new Date()
+      });
+
+      // Finaliser le ZIP
+      await archive.finalize();
+      console.log(`✅ Export complété, taille de l'archive: ${archive.pointer()} bytes`);
+
+    } catch (err) {
+      console.error("❌ Export error:", err);
+      return res.status(500).json({ error: "Erreur lors de l'export: " + err.message });
     }
   }
 );

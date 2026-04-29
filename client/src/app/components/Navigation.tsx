@@ -67,9 +67,9 @@ export function Navigation() {
         <div className="content-stretch flex gap-2 sm:gap-5 items-center relative shrink-0" data-name="nav/navbarre">
           <Link to="/" className="h-10 sm:h-12 relative shrink-0 w-24 sm:w-32" data-name="Img Fake">
             <ImageWithFallback 
-              src={IMAGE_PLACEHOLDER_LOGO_SVG}
+              src="/logo casibio-2.png"
               alt="Logo ANR Casibio"
-              className="absolute inset-0 object-cover"
+              className="inset-0 object-contain"
             />
           </Link>
           
@@ -139,9 +139,9 @@ export function Navigation() {
       <div className="flex items-center justify-between px-3 sm:px-6 md:px-8 py-2 sm:py-3 bg-white">
         <Link to="/" className="h-10 sm:h-12 relative shrink-0 w-24 sm:w-32 md:w-40" data-name="Img Fake">
           <ImageWithFallback 
-            src="https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=120&h=48&fit=crop"
+            src="/logo casibio-2.png"
             alt="Logo ANR Casibio"
-            className="absolute inset-0 object-cover"
+            className="inset-0 object-contain"
           />
         </Link>
         

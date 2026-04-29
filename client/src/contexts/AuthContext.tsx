@@ -83,15 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyAuth();
   }, []);
 
-  // Déconnexion automatique à la fermeture de la page
+  // Déconnexion automatique uniquement à la fermeture réelle du site
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Appeler logout quand on ferme/quitte la page
-      logout();
+    const handlePageHide = (event: PageTransitionEvent) => {
+      // event.persisted indique si la page peut être restaurée (rechargement, navigation)
+      // Si persisted = false, c'est une vraie fermeture du site
+      if (!event.persisted) {
+        logout();
+      }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide as EventListener);
+    return () => window.removeEventListener('pagehide', handlePageHide as EventListener);
   }, []);
 
   const login = (data: any) => {

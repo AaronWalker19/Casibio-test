@@ -24,7 +24,7 @@ export function Footer() {
               </svg>
             </div>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
-              xlim group
+              Centre Européen de la Céramique
             </p>
           </div>
           <div className="flex gap-2 sm:gap-3 items-center relative shrink-0">
@@ -34,7 +34,7 @@ export function Footer() {
               </svg>
             </div>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
-              adresse
+              12 Rue Atlantis, 87068 Limoges
             </p>
           </div>
         </div>
@@ -51,7 +51,7 @@ export function Footer() {
               </svg>
             </div>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
-              mail@mail.com
+              contact@ircer.fr
             </p>
           </div>
           <div className="flex gap-2 sm:gap-3 items-center justify-center relative shrink-0">
@@ -61,42 +61,22 @@ export function Footer() {
               </svg>
             </div>
             <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap">
-              06 06 06 06 06
+               (+33) (0)5 87 50 23 09
             </p>
           </div>
         </div>
-
-        {/* Plan du site */}
-        <div className="flex flex-col gap-2 sm:gap-3 items-center text-center relative shrink-0">
-          <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-sm sm:text-base md:text-lg text-white whitespace-nowrap">
-            {t(language, "planDuSite")}
-          </p>
-          <Link 
-            to="/plan-du-site"
-            className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap hover:underline"
-          >
-            {t(language, "planDuSiteDescription")}
-          </Link>
-        </div>
+        
       </div>
 
-      {/* Social icons */}
-      <div className="flex gap-3 sm:gap-4 md:gap-5 items-center relative shrink-0">
-        <div className="relative shrink-0 size-6 sm:size-7 md:size-8 hover:opacity-80 transition cursor-pointer">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 60 60">
-            <rect fill="var(--color-gray-300)" height="60" width="60" />
-          </svg>
-        </div>
-        <div className="relative shrink-0 size-6 sm:size-7 md:size-8 hover:opacity-80 transition cursor-pointer">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 60 60">
-            <rect fill="var(--color-gray-300)" height="60" width="60" />
-          </svg>
-        </div>
-        <div className="relative shrink-0 size-6 sm:size-7 md:size-8 hover:opacity-80 transition cursor-pointer">
-          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 60 60">
-            <rect fill="var(--color-gray-300)" height="60" width="60" />
-          </svg>
-        </div>
+      {/* Liens légaux */}
+      <div className="flex gap-4 sm:gap-5 md:gap-6 items-center justify-center relative shrink-0">
+        <a 
+          href="https://anr.fr/Projet-ANR-23-CE08-0002"
+          className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-xs sm:text-sm md:text-base text-white whitespace-nowrap hover:underline"
+        >
+          https://anr.fr/Projet-ANR-23-CE08-0002
+        </a>
+        
       </div>
 
       {/* Copyright */}

@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import HomePage from "./pages/HomePage.tsx";
 import HistoirePage from "./pages/HistoirePage.tsx";
-import PlanDuSitePage from "./pages/PlanDuSitePage.tsx";
 import ArticlesPage from "./pages/articles/page.tsx";
 import ArticlePage from "./pages/articles/[id].tsx";
 import MemberArticlesPage from "./pages/MemberArticlesPage.tsx";
@@ -20,10 +19,6 @@ export const router = createBrowserRouter([
   {
     path: "/histoire",
     Component: HistoirePage,
-  },
-  {
-    path: "/plan-du-site",
-    Component: PlanDuSitePage,
   },
   {
     path: "/articles",

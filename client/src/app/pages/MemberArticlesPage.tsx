@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { Navigation } from "../components/Navigation.tsx";
 import { Footer } from "../components/Footer.tsx";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback.tsx";
 import { ArticleCard } from "../components/ArticleCard.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { useLanguage } from "../../contexts/LanguageContext.tsx";
@@ -60,6 +59,42 @@ export default function MemberArticlesPage() {
     }
   }, [isAuthenticated, authLoading]);
 
+  // Marquer la session comme active au chargement de la page
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // Marquer que l'utilisateur est sur la page
+    sessionStorage.setItem("userOnPage", "true");
+    
+    return () => {
+      // Pas de nettoyage au démontage, on veut garder la session
+    };
+  }, [isAuthenticated]);
+
+  // Déconnecter si l'utilisateur quitte la page (mais pas sur rechargement)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Vérifier si c'est un rechargement ou un vrai départ
+      // Si sessionStorage existe, c'est un rechargement (la session persiste)
+      // Si sessionStorage n'existe pas, c'est une fermeture (la session est effacée)
+      const isSessionAlive = sessionStorage.getItem("userOnPage") === "true";
+      
+      if (!isSessionAlive) {
+        // La session a été effacée = vrai départ (fermeture, navigation, etc.)
+        navigator.sendBeacon("/api/auth/logout", JSON.stringify({}));
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Nettoyer au démontage
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isAuthenticated]);
+
   const fetchArticles = async () => {
     try {
       setLoading(true);
@@ -81,9 +116,11 @@ export default function MemberArticlesPage() {
       setArticles(data);
       setError("");
       
-      // Récupérer les images liées à chaque article
+      // Récupérer les images liées à chaque article EN PARALLÈLE
       const imagesMap: { [key: number]: string } = {};
-      for (const article of data) {
+      
+      // Créer toutes les promesses en parallèle
+      const imagePromises = data.map(async (article: Article) => {
         try {
           const filesResponse = await fetch(`/api/projects/${article.id}/files`, {
             credentials: 'include',
@@ -117,7 +154,10 @@ export default function MemberArticlesPage() {
         } catch (err) {
           console.error(`Erreur lors du chargement des images pour l'article ${article.id}:`, err);
         }
-      }
+      });
+      
+      // Attendre que toutes les promesses se terminent EN PARALLÈLE
+      await Promise.all(imagePromises);
       setArticleImages(imagesMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors du chargement");
@@ -158,6 +198,46 @@ export default function MemberArticlesPage() {
   const handleViewArticle = (articleId: number) => {
     // Naviguer vers la page de détail de l'article
     navigate(`/articles/${articleId}`);
+  };
+
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/projects/export/all", {
+        method: "GET",
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError("Vous n'êtes pas authentifié");
+          return;
+        }
+        throw new Error("Erreur lors de l'export des articles");
+      }
+
+      // Créer un blob à partir de la réponse
+      const blob = await response.blob();
+      
+      // Créer un lien de téléchargement
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export_articles_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Nettoyer
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'export");
+      console.error("Error exporting articles:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -275,12 +355,13 @@ export default function MemberArticlesPage() {
                   )}
                 </button>
               </div>
+              <div className="flex items-center gap-[20px]">
               <Link
                 to="/formulaire"
                 className="bg-primary flex gap-[10px] items-center justify-center px-[20px] py-[15px] rounded-[4px]"
               >
                 <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
-                  Ajouter un articles
+                  Ajouter un article
                 </p>
                 <div className="relative size-[24px]">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
@@ -288,6 +369,21 @@ export default function MemberArticlesPage() {
                   </svg>
                 </div>
               </Link>
+              <button
+                onClick={handleExport}
+                disabled={loading || articles.length === 0}
+                className="bg-gray-700 hover:bg-gray-800 disabled:bg-gray-400 flex gap-[10px] items-center justify-center px-[20px] py-[15px] rounded-[4px]"
+              >
+                <p className="font-['Inter:Regular',sans-serif] font-normal text-[16px] text-white whitespace-nowrap">
+                  Exporter
+                </p>
+                <div className="relative size-[24px]">
+                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
+                    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM12 19C10.34 19 9 17.66 9 16C9 14.34 10.34 13 12 13C13.66 13 15 14.34 15 16C15 17.66 13.66 19 12 19ZM13 9H6V4H13V9Z" fill="white" />
+                  </svg>
+                </div>
+              </button>
+              </div>
             </div>
             {/* Champ de recherche visible */}
             {showSearchInput && (
