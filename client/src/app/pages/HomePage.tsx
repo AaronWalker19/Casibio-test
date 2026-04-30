@@ -226,8 +226,7 @@ export default function HomePage() {
           <p className="font-['Inter:Bold',sans-serif] font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-error-accent break-words text-center">
             {t(language, "projetANRCasibio")}
           </p>
-          <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 text-xs sm:text-sm md:text-base text-center text-white max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl">
-            {t(language, "projectDescription")}
+          <p className="font-['Inter:Regular',sans-serif] font-normal opacity-70 text-xs sm:text-sm md:text-base text-center text-white max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl" dangerouslySetInnerHTML={{ __html: t(language, "projectDescription") }}>
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5 items-center justify-center w-full">
@@ -248,7 +247,7 @@ export default function HomePage() {
             </div>
           </Link>
           <Link
-            to="/histoire"
+            to="/historique"
             className="bg-white flex gap-1.5 sm:gap-2 h-9 sm:h-10 md:h-11 items-center justify-center px-3 sm:px-4 md:px-5 rounded-sm hover:bg-gray-100 transition w-full sm:w-auto"
           >
             <p className="font-['Inter:Regular',sans-serif] font-normal text-primary text-base sm:text-lg md:text-xl whitespace-nowrap">

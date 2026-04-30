@@ -71,6 +71,26 @@ try {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser()); // ✅ Permet de lire les cookies
+console.log("📝 Middlewares JSON, URL et Cookie activés");
+
+// Middleware de logging pour toutes les requêtes
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] 📨 ${req.method} ${req.path}`);
+  console.log(`   Headers: ${JSON.stringify({ host: req.hostname, agent: req.get('user-agent') })}`);
+  if (Object.keys(req.body).length > 0) {
+    console.log(`   Body: ${JSON.stringify(req.body).substring(0, 200)}`);
+  }
+  
+  // Capturer les erreurs de response
+  const originalJson = res.json;
+  res.json = function(data) {
+    console.log(`   ✓ Response: ${res.statusCode} - ${JSON.stringify(data).substring(0, 200)}`);
+    return originalJson.call(this, data);
+  };
+  
+  next();
+});
 
 // SÉCURITÉ: Rate limiting global
 const { apiLimiter } = require("./middleware/security");
@@ -95,6 +115,7 @@ try {
 // ===== HEALTH CHECK =====
 app.get("/api/health", async (req, res) => {
   try {
+    console.log("🏥 Health check demandé");
     const dbPool = db && typeof db.pool === 'function' ? db.pool() : null;
     
     let dbStatus = "❌ Not initialized";

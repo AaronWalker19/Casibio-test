@@ -2,7 +2,7 @@ export const translations = {
   FR: {
     // Navigation
     accueil: "Accueil",
-    histoire: "Histoire",
+    histoire: "Historique",
     articles: "Articles",
     gallerie: "Galerie",
     connexion: "Connexion",
@@ -10,8 +10,8 @@ export const translations = {
     back: "Back",
 
     // HomePage
-    projetANRCasibio: "Projet ANR Casibio",
-    projectDescription: "vise à élaborer des céramiques poreuses catalytiques Ni(Ru)/SiCxOy pour les réactions de reformage à sec du méthane et de méthanation du CO2, deux réactions incontournables dans le domaine de l'énergie pour lesquels la stabilité du catalyseur est la principale problématique",
+    projetANRCasibio: "Projet ANR CASiBIO",
+    projectDescription: "vise à élaborer des céramiques poreuses catalytiques N<sub>i</sub>(Ru)/S<sub>i</sub>C<sub>x</sub>O<sub>y</sub> pour les réactions de reformage à sec du méthane et de méthanation du CO², deux réactions incontournables dans le domaine de l'énergie pour lesquels la stabilité du catalyseur est la principale problématique",
     enSavoirPlus: "En savoir plus",
     dernieresPublications: "Dernières publications",
     decouvrezNosTravaux: "Découvrez nos travaux et avancements récents",
@@ -52,7 +52,7 @@ export const translations = {
     galerie: "Galerie",
     fichierLie: "Fichier lié à l'article",
     imageEtVideos: "Images et vidéos liées à l'article",
-    histoireProjetCasibio: "Histoire du Projet CASiBIO",
+    histoireProjetCasibio: "Historique du Projet CASiBIO",
     casibioContext1: "Le projet CASiBIO (ANR-23-CE08-0002) s'inscrit dans une volonté de répondre aux enjeux actuels de la transition énergétique, en proposant des solutions innovantes pour la valorisation du biogaz et la production de méthane de synthèse.",
     casibioContext2: "Face à l'augmentation des émissions de CO₂ et à la nécessité de développer des sources d'énergie renouvelables, la méthanation et le reformage du méthane apparaissent comme des procédés prometteurs. Toutefois, leur déploiement industriel reste limité par la stabilité des catalyseurs et leur sensibilité aux conditions réelles d'exploitation.",
     casibioContext3: "C'est dans ce contexte que CASiBIO a été initié, avec l'ambition de concevoir une nouvelle génération de catalyseurs à base de nickel et de ruthénium supportés sur des céramiques de type SiCxOy. Ces matériaux innovants visent à améliorer les performances catalytiques tout en garantissant une meilleure résistance thermique et chimique.",
@@ -86,7 +86,7 @@ export const translations = {
   EN: {
     // Navigation
     accueil: "Home",
-    histoire: "History",
+    histoire: "Historical",
     articles: "Articles",
     gallerie: "Gallery",
     connexion: "Login",
@@ -94,8 +94,8 @@ export const translations = {
     back: "Back",
 
     // HomePage
-    projetANRCasibio: "ANR Casibio Project",
-    projectDescription: "aims to develop porous catalytic ceramics Ni(Ru)/SiCxOy for dry methane reforming and CO2 methanation reactions, two essential reactions in the energy field for which catalyst stability is the main issue",
+    projetANRCasibio: "ANR CASiBIO Project",
+    projectDescription: "aims to develop porous catalytic ceramics N<sub>i</sub>(Ru)/S<sub>i</sub>C<sub>x</sub>O<sub>y</sub> for dry methane reforming and CO² methanation reactions, two essential reactions in the energy field for which catalyst stability is the main issue",
     enSavoirPlus: "Learn More",
     dernieresPublications: "Latest Publications",
     decouvrezNosTravaux: "Discover our recent work and advancements",
@@ -136,7 +136,7 @@ export const translations = {
     galerie: "Gallery",
     fichierLie: "Files related to the article",
     imageEtVideos: "Images and videos related to the article",
-    histoireProjetCasibio: "History of the CASiBIO Project",
+    histoireProjetCasibio: "Historical of the CASiBIO Project",
     casibioContext1: "The CASiBIO project (ANR-23-CE08-0002) is part of an effort to address current energy transition challenges by proposing innovative solutions for biogas valorization and synthetic methane production.",
     casibioContext2: "Given the increasing CO₂ emissions and the need to develop renewable energy sources, methanation and methane reforming appear as promising processes. However, their industrial deployment remains limited by catalyst stability and sensitivity to real operating conditions.",
     casibioContext3: "It is in this context that CASiBIO was initiated, with the ambition to design a new generation of nickel and ruthenium catalysts supported on SiCxOy ceramics. These innovative materials aim to improve catalytic performance while ensuring better thermal and chemical resistance.",

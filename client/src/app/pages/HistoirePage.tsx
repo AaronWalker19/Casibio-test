@@ -12,7 +12,7 @@ export default function HistoirePage() {
       <Navigation />
       <div className="bg-primary flex flex-col gap-3 sm:gap-4 md:gap-5 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
         <p className="font-['Inter:Bold',sans-serif] font-bold relative shrink-0 text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-error-accent w-full break-words">
-          Projet ANR Casibio
+          Projet ANR CASiBIO
         </p>
         <Link
           to="/articles"
@@ -62,7 +62,7 @@ export default function HistoirePage() {
           className="absolute border-gray-50 border-b inset-0 pointer-events-none"
         />
         <div className="flex flex-col items-center size-full">
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 md:gap-10 lg:gap-12 items-start px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16 w-full">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 md:gap-10 lg:gap-12 items-start px-4 sm:px-6 md:px-8 lg:px-40 py-8 sm:py-12 md:py-16 w-full">
             <div className="flex-1 flex flex-col gap-6 sm:gap-8 items-start w-full lg:w-auto">
               <div className="flex flex-col gap-4 sm:gap-6 items-start w-full">
                 <p className="font-['Inter:Bold',sans-serif] font-bold relative text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-black w-full">
@@ -88,20 +88,6 @@ export default function HistoirePage() {
                 <p className="font-['Inter:Regular',sans-serif] font-normal leading-relaxed text-xs sm:text-sm md:text-base text-black text-justify w-full">
                   {t(language, "casibioContext6")}
                 </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4 sm:gap-6 items-start relative shrink-0 w-full lg:w-80">
-              <div className="bg-gray-50 flex flex-col gap-2 sm:gap-3 items-start p-4 sm:p-6 md:p-8 rounded-sm w-full">
-                <p className="font-['Inter:Bold',sans-serif] font-bold text-lg sm:text-xl md:text-2xl text-black w-full">
-                  {t(language, "fichierLie")}
-                </p>
-                <div className="h-32 sm:h-40 md:h-48 relative shrink-0 w-full">
-                  <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1581093449818-2655b2467fd6?w=400&h=200&fit=crop"
-                    alt="file"
-                    className="w-full h-full object-cover rounded-sm"
-                  />
-                </div>
               </div>
             </div>
           </div>

@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
     Component: HomePage,
   },
   {
-    path: "/histoire",
+    path: "/historique",
     Component: HistoirePage,
   },
   {

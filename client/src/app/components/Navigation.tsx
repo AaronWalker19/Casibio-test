@@ -67,8 +67,8 @@ export function Navigation() {
         <div className="content-stretch flex gap-2 sm:gap-5 items-center relative shrink-0" data-name="nav/navbarre">
           <Link to="/" className="h-10 sm:h-12 relative shrink-0 w-24 sm:w-32" data-name="Img Fake">
             <ImageWithFallback 
-              src="/logo casibio-2.png"
-              alt="Logo ANR Casibio"
+              src="/logo casibio-1-blanc.png"
+              alt="Logo ANR CASiBIO"
               className="inset-0 object-contain"
             />
           </Link>
@@ -139,8 +139,8 @@ export function Navigation() {
       <div className="flex items-center justify-between px-3 sm:px-6 md:px-8 py-2 sm:py-3 bg-white">
         <Link to="/" className="h-10 sm:h-12 relative shrink-0 w-24 sm:w-32 md:w-40" data-name="Img Fake">
           <ImageWithFallback 
-            src="/logo casibio-2.png"
-            alt="Logo ANR Casibio"
+            src="/logo casibio-1.png"
+            alt="Logo ANR CASiBIO"
             className="inset-0 object-contain"
           />
         </Link>
@@ -168,21 +168,21 @@ export function Navigation() {
             </p>
           </Link>
           <Link
-            to="/histoire"
+            to="/historique"
             className={`content-stretch flex gap-1 h-8 lg:h-9 items-center justify-center px-2 lg:px-3 py-1 relative rounded-sm shrink-0 ${
-              isActive("/histoire") ? "bg-primary" : "bg-white hover:bg-gray-50"
+              isActive("/historique") ? "bg-primary" : "bg-white hover:bg-gray-50"
             }`}
             data-name="Component 7"
           >
             <div className="relative shrink-0 size-6 lg:size-7" data-name="famicons:book-sharp">
               <div className="absolute inset-[9.38%_3.13%_12.5%_3.13%]" data-name="Vector">
                 <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 34.6008 28.834">
-                  <path d={svgPaths.p1d3f4100} fill={isActive("/histoire") ? "white" : "var(--color-primary)"} id="Vector" />
+                  <path d={svgPaths.p1d3f4100} fill={isActive("/historique") ? "white" : "var(--color-primary)"} id="Vector" />
                 </svg>
               </div>
             </div>
             <p className={`font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-sm lg:text-base text-left whitespace-nowrap ${
-              isActive("/histoire") ? "text-white" : "text-primary"
+              isActive("/historique") ? "text-white" : "text-primary"
             }`}>
               {t(language, "histoire")}
             </p>
@@ -296,19 +296,19 @@ export function Navigation() {
             </p>
           </Link>
           <Link
-            to="/histoire"
+            to="/historique"
             onClick={() => setMobileMenuOpen(false)}
             className={`flex gap-2 items-center px-3 py-2 rounded-sm ${
-              isActive("/histoire") ? "bg-primary" : "bg-gray-50 hover:bg-gray-100"
+              isActive("/historique") ? "bg-primary" : "bg-gray-50 hover:bg-gray-100"
             }`}
           >
             <div className="relative shrink-0 size-5">
               <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 34.6008 28.834">
-                <path d={svgPaths.p1d3f4100} fill={isActive("/histoire") ? "white" : "var(--color-primary)"} id="Vector" />
+                <path d={svgPaths.p1d3f4100} fill={isActive("/historique") ? "white" : "var(--color-primary)"} id="Vector" />
               </svg>
             </div>
             <p className={`font-['Inter:Regular',sans-serif] font-normal text-sm ${
-              isActive("/histoire") ? "text-white" : "text-primary"
+              isActive("/historique") ? "text-white" : "text-primary"
             }`}>
               {t(language, "histoire")}
             </p>

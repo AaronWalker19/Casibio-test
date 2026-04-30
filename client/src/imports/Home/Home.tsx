@@ -71,7 +71,7 @@ function Frame5() {
   return (
     <div className="content-stretch flex flex-col gap-[10px] items-center relative shrink-0">
       <Frame4 />
-      <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[#ff404a] text-[96px] whitespace-nowrap">Projet ANR Casibio</p>
+      <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[#ff404a] text-[96px] whitespace-nowrap">Projet ANR CASiBIO</p>
       <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic opacity-70 relative shrink-0 text-[14px] text-center text-white w-[901px]">vise à élaborer des céramiques poreuses catalytiques Ni(Ru)/SiCxOy pour les réactions de reformage à sec du méthane et de méthanation du CO2, deux réactions incontournables dans le domaine de l’énergie pour lesquels la stabilité du catalyseur est la principale problématique</p>
     </div>
   );

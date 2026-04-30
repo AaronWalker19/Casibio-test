@@ -54,7 +54,7 @@ function Frame2() {
 function Frame3() {
   return (
     <div className="content-stretch flex flex-col items-center relative shrink-0">
-      <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[#ff404a] text-[96px] whitespace-nowrap">Projet ANR Casibio</p>
+      <p className="font-['Inter:Bold',sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[#ff404a] text-[96px] whitespace-nowrap">Projet ANR CASiBIO</p>
     </div>
   );
 }

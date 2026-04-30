@@ -44,13 +44,16 @@ const hashToken = (token) => {
 };
 
 // Envoyer un email d'invitation (stub - à intégrer avec un vrai service d'email)
-const sendInvitationEmailNotification = async (email, token, frontendUrl) => {
-  return await sendInvitationEmail(email, token, frontendUrl);
+const sendInvitationEmailNotification = async (email, token, frontendUrl, ccEmail = null) => {
+  return await sendInvitationEmail(email, token, frontendUrl, ccEmail);
 };
 
 // Log pour déboguer
 router.use((req, res, next) => {
-  console.log("Auth route received:", req.method, req.path);
+  const timestamp = new Date().toISOString();
+  console.log(`[AUTH] [${timestamp}] 📨 ${req.method} ${req.path}`);
+  console.log(`       Body: ${JSON.stringify(req.body).substring(0, 150)}`);
+  console.log(`       User: ${req.user ? `ID:${req.user.userId} Role:${req.user.role}` : 'Anonymous'}`);
   next();
 });
 
@@ -65,10 +68,12 @@ router.post("/register",
     // Validation des erreurs
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error(`[REGISTER] ❌ Validation error:`, errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { username, email, password } = req.body;
+    console.log(`[REGISTER] 👤 Tentative d'enregistrement: username=${username}, email=${email}`);
 
     try {
       // Vérifier si c'est le premier utilisateur
@@ -76,8 +81,10 @@ router.post("/register",
       const row = await checkStmt.get();
       const isFirstUser = row && row.count === 0;
       const userRole = isFirstUser ? "admin" : "member";
+      console.log(`[REGISTER] 📊 Premier utilisateur? ${isFirstUser} (Total: ${row?.count || 0})`);
 
       // Hash password
+      console.log(`[REGISTER] 🔐 Hash du mot de passe...`);
       const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
       const sql = `
@@ -86,10 +93,14 @@ router.post("/register",
       `;
 
       const stmt = db.prepare(sql);
+      console.log(`[REGISTER] 💾 Insertion en BD...`);
       const result = await stmt.run(username, email, hash, userRole);
 
       const newUserId = result.lastInsertRowid || 1;
+      console.log(`[REGISTER] ✅ Utilisateur créé! ID=${newUserId}, Role=${userRole}`);
+      
       const tokenJwt = generateToken(newUserId, username, userRole);
+      console.log(`[REGISTER] 🔑 JWT généré`);
       
       res.json({
         message: "Utilisateur créé",
@@ -98,9 +109,11 @@ router.post("/register",
       });
     } catch (err) {
       if (err.message && err.message.includes("UNIQUE")) {
+        console.warn(`[REGISTER] ⚠️  UNIQUE constraint violation: ${err.message}`);
         return res.status(400).json({ error: "Utilisateur ou email déjà existant" });
       }
-      console.error("Register error:", err);
+      console.error(`[REGISTER] ❌ Erreur:`, err.message);
+      console.error(`[REGISTER] Stack:`, err.stack);
       // SÉCURITÉ: Ne pas exposer les détails d'erreur
       return res.status(500).json({ error: "Erreur lors de l'enregistrement" });
     }
@@ -133,22 +146,31 @@ router.post("/login",
       }
 
       // Chercher l'utilisateur par username OU email
+      console.log(`[LOGIN] 🔍 Recherche utilisateur: ${username}`);
       const stmt = db.prepare("SELECT * FROM users WHERE username = ? OR email = ?");
       const user = await stmt.get(username, username);
 
       if (!user) {
         // SÉCURITÉ: Message d'erreur générique pour ne pas révéler si l'utilisateur existe
+        console.warn(`[LOGIN] ⚠️  Utilisateur non trouvé: ${username}`);
         return res.status(401).json({ error: "Identifiants invalides" });
       }
 
+      console.log(`[LOGIN] ✅ Utilisateur trouvé: ID=${user.id}, Role=${user.role}`);
+
       // Vérifier le mot de passe
+      console.log(`[LOGIN] 🔐 Vérification du mot de passe...`);
       const isPasswordValid = await bcrypt.compare(password, user.password_hash);
       if (!isPasswordValid) {
+        console.warn(`[LOGIN] ⚠️  Mot de passe invalide pour: ${username}`);
         return res.status(401).json({ error: "Identifiants invalides" });
       }
+
+      console.log(`[LOGIN] ✅ Mot de passe correct`);
 
       // Générer le token
       const token = generateToken(user.id, user.username, user.role);
+      console.log(`[LOGIN] 🔑 JWT généré pour: ${user.username}`);
       
       // Définir le cookie httpOnly et secure (session cookie - expire à la fermeture du navigateur)
       res.cookie('authToken', token, {
@@ -158,13 +180,14 @@ router.post("/login",
         // Pas de maxAge = session cookie (expire à la fermeture du navigateur)
       });
       
+      console.log(`[LOGIN] ✅ Connexion réussie pour: ${user.username}`);
       res.json({
         message: "Connexion réussie",
         token,
         user: { id: user.id, username: user.username, email: user.email, role: user.role, name: user.name }
       });
     } catch (err) {
-      console.error("❌ Login error:", {
+      console.error(`[LOGIN] ❌ Erreur:`, {
         message: err.message,
         stack: err.stack,
         name: err.name,
@@ -334,29 +357,36 @@ router.post("/invite",
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error(`[INVITE] ❌ Validation error:`, errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email } = req.body;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    console.log(`[INVITE] 📧 Admin ${req.user.username} (ID:${req.user.userId}) invites: ${email}`);
 
     try {
       // Vérifier si l'email existe déjà
+      console.log(`[INVITE] 🔍 Vérification si l'email existe...`);
       const existingUser = await db.prepare("SELECT id FROM users WHERE email = ?").get(email);
       if (existingUser) {
+        console.warn(`[INVITE] ⚠️  Email déjà utilisé: ${email}`);
         return res.status(400).json({ error: "Cet email est déjà utilisé" });
       }
 
       // Vérifier si l'invitation existe déjà et n'est pas expirée
+      console.log(`[INVITE] 🔍 Vérification des invitations actives...`);
       const existingInvite = await db.prepare(
         "SELECT id FROM user_invitations WHERE email = ? AND activated_at IS NULL AND expires_at > NOW()"
       ).get(email);
       
       if (existingInvite) {
+        console.warn(`[INVITE] ⚠️  Invitation active existe déjà pour: ${email}`);
         return res.status(400).json({ error: "Une invitation active existe déjà pour cet email" });
       }
 
       // Générer le token
+      console.log(`[INVITE] 🔑 Génération du token d'invitation...`);
       const token = generateInvitationToken();
       const tokenHash = hashToken(token);
       
@@ -364,15 +394,29 @@ router.post("/invite",
       const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
       // Insérer l'invitation en BD
+      console.log(`[INVITE] 💾 Insertion de l'invitation en BD...`);
       const sql = `
         INSERT INTO user_invitations (email, token_hash, invited_by, expires_at)
         VALUES (?, ?, ?, ?)
       `;
       const stmt = db.prepare(sql);
       await stmt.run(email, tokenHash, req.user.userId, expiresAt.toISOString());
+      console.log(`[INVITE] ✅ Invitation créée, expiration: ${expiresAt.toISOString()}`);
 
-      // Envoyer l'email
-      await sendInvitationEmailNotification(email, token, frontendUrl);
+
+      // Email de la boîte d'envoi (depuis .env) - sera en CC
+      const sendingEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+      console.log(`[INVITE] 📬 Email d'envoi (CC): ${sendingEmail}`);
+
+      // Envoyer l'email avec CC à la boîte d'envoi
+      console.log(`[INVITE] 📧 Envoi de l'email d'invitation...`);
+      const emailSent = await sendInvitationEmailNotification(email, token, frontendUrl, sendingEmail);
+      
+      if (emailSent) {
+        console.log(`[INVITE] ✅ Email envoyé avec succès`);
+      } else {
+        console.warn(`[INVITE] ⚠️  Email non envoyé (service désactivé ou erreur)`);
+      }
 
       res.json({
         message: "Invitation envoyée avec succès",
@@ -380,7 +424,8 @@ router.post("/invite",
         expiresAt
       });
     } catch (err) {
-      console.error("Invite member error:", err);
+      console.error(`[INVITE] ❌ Erreur:`, err.message);
+      console.error(`[INVITE] Stack:`, err.stack);
       return res.status(500).json({ error: "Erreur lors de l'envoi de l'invitation" });
     }
   }

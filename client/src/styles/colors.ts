@@ -1,5 +1,5 @@
 /**
- * Palette de couleurs du site ANR Casibio
+ * Palette de couleurs du site ANR CASiBIO
  * Centralisée et utilisable en JavaScript/TypeScript
  * 
  * Usage:
