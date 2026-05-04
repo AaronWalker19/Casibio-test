@@ -9,6 +9,7 @@ import GalleriePage from "./pages/GalleriePage.tsx";
 import BackMemberPage from "./pages/BackMemberPage.tsx";
 import ActivateAccountPage from "./pages/ActivateAccountPage.tsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.tsx";
+import HalPage from "./pages/HalPage.tsx";
 import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
 
 export const router = createBrowserRouter([
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
   {
     path: "/reset-password",
     Component: ResetPasswordPage,
+  },
+  {
+    path: "/hal",
+    Component: HalPage,
   },
   {
     path: "*",

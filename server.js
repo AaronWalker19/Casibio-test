@@ -78,7 +78,7 @@ app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] 📨 ${req.method} ${req.path}`);
   console.log(`   Headers: ${JSON.stringify({ host: req.hostname, agent: req.get('user-agent') })}`);
-  if (Object.keys(req.body).length > 0) {
+  if (req.body && Object.keys(req.body).length > 0) {
     console.log(`   Body: ${JSON.stringify(req.body).substring(0, 200)}`);
   }
   
