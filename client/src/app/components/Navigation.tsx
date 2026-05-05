@@ -223,6 +223,27 @@ export function Navigation() {
               {t(language, "gallerie")}
             </p>
           </Link>
+          <Link
+            to="/hal"
+            className={`content-stretch flex gap-1 h-8 lg:h-9 items-center justify-center px-2 lg:px-3 py-1 relative rounded-sm shrink-0 ${
+              isActive("/hal") ? "bg-primary" : "bg-white hover:bg-gray-50"
+            }`}
+            data-name="Component 10"
+          >
+            <div className="relative shrink-0 size-6 lg:size-7" data-name="hal-icon">
+              <div className="absolute inset-[12.5%]" data-name="Vector">
+                <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" stroke={isActive("/hal") ? "white" : "var(--color-primary)"} strokeWidth="2" fill="none" rx="2"/>
+                </svg>
+              </div>
+            </div>
+            <p className={`font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic relative shrink-0 text-sm lg:text-base text-left whitespace-nowrap ${
+              isActive("/hal") ? "text-white" : "text-primary"
+            }`}>
+              HAL
+            </p>
+          </Link>
+          
         </div>
 
         {/* Right side - Desktop */}
@@ -345,6 +366,24 @@ export function Navigation() {
               isActive("/gallerie") ? "text-white" : "text-primary"
             }`}>
               {t(language, "gallerie")}
+            </p>
+          </Link>
+          <Link
+            to="/hal"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex gap-2 items-center px-3 py-2 rounded-sm ${
+              isActive("/hal") ? "bg-primary" : "bg-gray-50 hover:bg-gray-100"
+            }`}
+          >
+            <div className="relative shrink-0 size-5">
+              <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" stroke={isActive("/hal") ? "white" : "var(--color-primary)"} strokeWidth="2" fill="none" rx="2"/>
+              </svg>
+            </div>
+            <p className={`font-['Inter:Regular',sans-serif] font-normal text-sm ${
+              isActive("/hal") ? "text-white" : "text-primary"
+            }`}>
+              HAL
             </p>
           </Link>
           <button 

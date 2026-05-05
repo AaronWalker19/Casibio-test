@@ -10,6 +10,7 @@ import BackMemberPage from "./pages/BackMemberPage.tsx";
 import ActivateAccountPage from "./pages/ActivateAccountPage.tsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.tsx";
 import HalPage from "./pages/HalPage.tsx";
+import HalPageTest from "./pages/HalPageTest.tsx";
 import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
 
 export const router = createBrowserRouter([
@@ -60,6 +61,10 @@ export const router = createBrowserRouter([
   {
     path: "/hal",
     Component: HalPage,
+  },
+  {
+    path: "/haltest",
+    Component: HalPageTest,
   },
   {
     path: "*",

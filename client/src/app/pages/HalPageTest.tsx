@@ -26,7 +26,7 @@ export default function HalPage() {
       try {
         setLoading(true);
         const response = await fetch(
-          "https://api.hal.science/search/?q=anrProjectReference_s:ANR-23-CE08-0002&fl=authLastNameFirstName_s,uri_s,title_s"
+          "https://api.hal.science/search/?q=anrProjectReference_s:ANR-20-CE46-0004&fl=authLastNameFirstName_s,uri_s,title_s"
         );
         
         if (!response.ok) {
