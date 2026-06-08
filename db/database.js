@@ -55,9 +55,9 @@ async function createTables() {
         password_hash VARCHAR(255),
         name VARCHAR(255),
         role ENUM('admin', 'member') DEFAULT 'member',
-        is_active BOOLEAN DEFAULT FALSE COMMENT 'Compte activé ou non',
+        is_active BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        activated_at TIMESTAMP NULL COMMENT 'Date d\'activation du compte'
+        activated_at TIMESTAMP NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
@@ -162,12 +162,12 @@ async function createTables() {
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS user_invitations (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(100) NOT NULL COMMENT 'Email de la personne invitée',
-        token_hash VARCHAR(255) COMMENT 'Hash du token pour la BD',
-        invited_by INT COMMENT 'ID de l\'admin qui a envoyé l\'invitation',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'envoi de l\'invitation',
-        expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
-        activated_at TIMESTAMP NULL COMMENT 'Date d\'activation (NULL si pas encore activé)',
+        email VARCHAR(100) NOT NULL,
+        token_hash VARCHAR(255),
+        invited_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        activated_at TIMESTAMP NULL,
         INDEX idx_email (email),
         INDEX idx_token_hash (token_hash),
         INDEX idx_expires_at (expires_at),
@@ -180,12 +180,12 @@ async function createTables() {
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS password_resets (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL COMMENT 'ID de l\'utilisateur',
-        email VARCHAR(100) NOT NULL COMMENT 'Email de l\'utilisateur',
-        token_hash VARCHAR(255) COMMENT 'Hash du token pour la sécurité',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
-        expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
-        reset_at TIMESTAMP NULL COMMENT 'Date de réinitialisation (NULL si pas utilisé)',
+        user_id INT NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        token_hash VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        reset_at TIMESTAMP NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_email (email),
         INDEX idx_token_hash (token_hash),

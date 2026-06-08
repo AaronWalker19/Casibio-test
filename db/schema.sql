@@ -14,88 +14,84 @@ USE casibio;
 -- ============================================
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(100) UNIQUE COMMENT 'Nom d\'utilisateur unique',
-  email VARCHAR(100) UNIQUE NOT NULL COMMENT 'Email unique',
-  password_hash VARCHAR(255) COMMENT 'Hash du mot de passe (bcryptjs) - NULL avant activation',
-  name VARCHAR(255) COMMENT 'Nom complet de l\'utilisateur',
-  role ENUM('admin', 'member') DEFAULT 'member' COMMENT 'Rôle: admin ou member',
-  is_active BOOLEAN DEFAULT FALSE COMMENT 'Compte activé ou non',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
-  activated_at TIMESTAMP NULL COMMENT 'Date d\'activation du compte',
+  username VARCHAR(100) UNIQUE,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255),
+  name VARCHAR(255),
+  role ENUM('admin', 'member') DEFAULT 'member',
+  is_active BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  activated_at TIMESTAMP NULL,
   
   INDEX idx_username (username),
   INDEX idx_email (email),
   INDEX idx_is_active (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='Table des utilisateurs du système';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- Table: user_invitations (Tokens d\'invitation)
+-- Table: user_invitations
 -- ============================================
 CREATE TABLE IF NOT EXISTS user_invitations (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  email VARCHAR(100) NOT NULL COMMENT 'Email de la personne invitée',
-  token VARCHAR(255) UNIQUE NOT NULL COMMENT 'Token d\'activation unique',
-  token_hash VARCHAR(255) COMMENT 'Hash du token pour la BD',
-  invited_by INT COMMENT 'ID de l\'admin qui a envoyé l\'invitation',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'envoi de l\'invitation',
-  expires_at TIMESTAMP NOT NULL COMMENT 'Date d\'expiration du token',
-  activated_at TIMESTAMP NULL COMMENT 'Date d\'activation (NULL si pas encore activé)',
+  email VARCHAR(100) NOT NULL,
+  token VARCHAR(255) UNIQUE NOT NULL,
+  token_hash VARCHAR(255),
+  invited_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  activated_at TIMESTAMP NULL,
   
   INDEX idx_email (email),
   INDEX idx_token_hash (token_hash),
   INDEX idx_expires_at (expires_at),
   FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='Table des invitations d\'activation de compte';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- Table: projects (Projets)
+-- Table: projects
 -- ============================================
 CREATE TABLE IF NOT EXISTS projects (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  code_anr VARCHAR(100) COMMENT 'Code ANR du projet',
-  title_fr VARCHAR(255) COMMENT 'Titre en français',
-  title_en VARCHAR(255) COMMENT 'Titre en anglais',
-  summary_fr TEXT COMMENT 'Résumé en français',
-  summary_en TEXT COMMENT 'Résumé en anglais',
-  methods_fr TEXT COMMENT 'Méthodes en français',
-  methods_en TEXT COMMENT 'Méthodes en anglais',
-  results_fr TEXT COMMENT 'Résultats en français',
-  results_en TEXT COMMENT 'Résultats en anglais',
-  perspectives_fr TEXT COMMENT 'Perspectives en français',
-  perspectives_en TEXT COMMENT 'Perspectives en anglais',
-  created_by INT COMMENT 'ID de l\'utilisateur qui a créé le projet',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date de création',
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Date de mise à jour',
+  code_anr VARCHAR(100),
+  title_fr VARCHAR(255),
+  title_en VARCHAR(255),
+  summary_fr TEXT,
+  summary_en TEXT,
+  methods_fr TEXT,
+  methods_en TEXT,
+  results_fr TEXT,
+  results_en TEXT,
+  perspectives_fr TEXT,
+  perspectives_en TEXT,
+  created_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_code_anr (code_anr),
   INDEX idx_created_by (created_by),
   INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='Table des projets de recherche';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- Table: project_files (Fichiers des projets)
+-- Table: project_files
 -- ============================================
 CREATE TABLE IF NOT EXISTS project_files (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  project_id INT NOT NULL COMMENT 'ID du projet',
-  file_path VARCHAR(500) COMMENT 'Chemin du fichier sur le serveur',
-  file_name VARCHAR(255) COMMENT 'Nom du fichier stocké',
-  file_display_name VARCHAR(255) COMMENT 'Nom du fichier affichable',
-  file_type VARCHAR(100) COMMENT 'Type MIME du fichier (image/png, application/pdf, etc)',
-  file_desc_fr VARCHAR(150) COMMENT 'Description du fichier en français (max 150 caractères)',
-  file_desc_en VARCHAR(150) COMMENT 'Description du fichier en anglais (max 150 caractères)',
-  is_present_image BOOLEAN DEFAULT FALSE COMMENT 'Indique si c\'est l\'image de présentation du projet',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Date d\'upload',
+  project_id INT NOT NULL,
+  file_path VARCHAR(500),
+  file_name VARCHAR(255),
+  file_display_name VARCHAR(255),
+  file_type VARCHAR(100),
+  file_desc_fr VARCHAR(150),
+  file_desc_en VARCHAR(150),
+  is_present_image BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   INDEX idx_project_id (project_id),
   INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='Table des fichiers associés aux projets';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
 -- Table: project_contents (Contenus/sections d'un projet)

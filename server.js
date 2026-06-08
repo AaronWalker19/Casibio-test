@@ -85,7 +85,9 @@ app.use((req, res, next) => {
   // Capturer les erreurs de response
   const originalJson = res.json;
   res.json = function(data) {
-    console.log(`   ✓ Response: ${res.statusCode} - ${JSON.stringify(data).substring(0, 200)}`);
+    const jsonStr = JSON.stringify(data);
+    const responseStr = jsonStr ? jsonStr.substring(0, 200) : 'undefined';
+    console.log(`   ✓ Response: ${res.statusCode} - ${responseStr}`);
     return originalJson.call(this, data);
   };
   

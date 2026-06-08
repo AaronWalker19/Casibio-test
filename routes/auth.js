@@ -52,7 +52,8 @@ const sendInvitationEmailNotification = async (email, token, frontendUrl, ccEmai
 router.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[AUTH] [${timestamp}] 📨 ${req.method} ${req.path}`);
-  console.log(`       Body: ${JSON.stringify(req.body).substring(0, 150)}`);
+  const bodyStr = JSON.stringify(req.body);
+  console.log(`       Body: ${bodyStr ? bodyStr.substring(0, 150) : '(empty)'}`);
   console.log(`       User: ${req.user ? `ID:${req.user.userId} Role:${req.user.role}` : 'Anonymous'}`);
   next();
 });
